@@ -6,7 +6,7 @@
 | --- | --- |
 | Edit | `src/main/java/com/pep/toolshare/domain/Member.java` |
 | TODO | `TODO LEARNER 1` |
-| Contract | `MemberDomainCompletionTest` (1 test) |
+| Public tests | `MemberDomainCompletionTest` (1 test) |
 | Check | `./scripts/verify-milestones.sh 1` |
 
 ## What to build

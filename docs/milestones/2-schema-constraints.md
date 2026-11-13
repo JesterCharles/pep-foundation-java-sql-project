@@ -6,7 +6,7 @@
 | --- | --- |
 | Edit | `src/main/resources/db/schema.sql` |
 | TODO | `TODO LEARNER 2A`–`2D` |
-| Contract | `SchemaCompletionTest` (4 tests) |
+| Public tests | `SchemaCompletionTest` (4 tests) |
 | Check | `./scripts/verify-milestones.sh 2` |
 
 ## What to build

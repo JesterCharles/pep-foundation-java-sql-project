@@ -6,7 +6,7 @@
 | --- | --- |
 | Edit | `src/main/java/com/pep/toolshare/member/JdbcMemberRepository.java` |
 | TODO | `TODO LEARNER 3A`–`3D` |
-| Contract | `JdbcMemberRepositoryCompletionTest` (2 tests) |
+| Public tests | `JdbcMemberRepositoryCompletionTest` (2 tests) |
 | Check | `./scripts/verify-milestones.sh 3` |
 
 ## What to build

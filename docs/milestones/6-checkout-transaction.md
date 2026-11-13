@@ -6,7 +6,7 @@
 | --- | --- |
 | Edit | `src/main/java/com/pep/toolshare/loan/LoanService.java` |
 | TODO | `TODO LEARNER 6` |
-| Contract | `LoanServiceCompletionTest` (4 tests) plus the final run check |
+| Public tests | `LoanServiceCompletionTest` (4 tests) plus the final run check |
 | Check | `./scripts/verify-milestones.sh 6` |
 
 ## What to build

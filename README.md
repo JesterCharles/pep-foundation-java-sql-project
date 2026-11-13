@@ -43,7 +43,6 @@ passes, which requires milestones 1 through N to pass.
 | 5 | [Category report](docs/milestones/5-category-report.md) | `./scripts/verify-milestones.sh 5` |
 | 6 | [Atomic checkout and final run](docs/milestones/6-checkout-transaction.md) | `./scripts/verify-milestones.sh 6` |
 
-The same list is available in machine-readable form in [`docs/milestones/manifest.tsv`](docs/milestones/manifest.tsv).
 The check prints PASS or FAIL with test counts for every milestone; details are in `target/surefire-reports/`.
 
 ## What you will practice
@@ -90,7 +89,6 @@ secrets in this repository.
 mvn -q compile exec:java               # print available tools and the category report
 mvn -q -Pcompletion test               # run every public learner-completion test
 ./scripts/verify-milestones.sh N       # check milestones 1 through N (1-6)
-./scripts/audit-public.sh              # scan tracked Git history for generated/private material (needs a Git checkout)
 ```
 
 Reset replaces only the ignored `data/` database. Tests use separate in-memory databases and do not touch local data.
@@ -125,5 +123,3 @@ features are not part of this project.
   `target/surefire-reports/` for details.
 - **A milestone check fails:** the check lists every milestone with its test counts. Fix the earliest failing
   milestone first; logs are in `target/milestone-check/`.
-- **`audit-public.sh` says no Git history was found:** expected in a downloaded copy without `.git`; the audit only
-  applies to a Git checkout.

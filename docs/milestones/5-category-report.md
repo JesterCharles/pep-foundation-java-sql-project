@@ -6,7 +6,7 @@
 | --- | --- |
 | Edit | `src/main/java/com/pep/toolshare/tool/JdbcToolRepository.java` |
 | TODO | `TODO LEARNER 5` |
-| Contract | `CategoryReportCompletionTest` (1 test) |
+| Public tests | `CategoryReportCompletionTest` (1 test) |
 | Check | `./scripts/verify-milestones.sh 5` |
 
 ## What to build
