@@ -1,7 +1,6 @@
 package com.pep.toolshare;
 
 import com.pep.toolshare.db.ConnectionFactory;
-import com.pep.toolshare.domain.CategorySummary;
 import com.pep.toolshare.domain.Tool;
 import com.pep.toolshare.domain.ToolStatus;
 import com.pep.toolshare.tool.JdbcToolRepository;
@@ -39,22 +38,6 @@ class JdbcToolRepositoryCompletionTest {
         assertEquals(
                 List.of("Claw Hammer", "Cordless Drill", "Garden Rake"),
                 tools.findAvailableByCategory(null).stream().map(Tool::name).toList()
-        );
-    }
-
-    @Test
-    void categoryReportUsesJoinsAggregatesAndHaving() {
-        assertEquals(
-                List.of(
-                        new CategorySummary("carpentry", 3L, 2L, 0L),
-                        new CategorySummary("gardening", 1L, 1L, 0L),
-                        new CategorySummary("renovation", 1L, 0L, 1L)
-                ),
-                tools.summarizeCategories(1)
-        );
-        assertEquals(
-                List.of(new CategorySummary("carpentry", 3L, 2L, 0L)),
-                tools.summarizeCategories(2)
         );
     }
 }

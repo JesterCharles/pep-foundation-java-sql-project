@@ -21,7 +21,7 @@ jobs:
           cache: maven
       - name: Build and health tests
         run: ./scripts/health.sh
-      - name: Confirm intentional starter failures
-        run: ./scripts/verify-starter.sh
+      - name: Confirm every milestone fails in the untouched starter
+        run: ./scripts/verify-milestones.sh starter
       - name: Audit public repository contents
         run: ./scripts/audit-public.sh

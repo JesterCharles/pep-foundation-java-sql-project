@@ -1,0 +1,9 @@
+# Lantern Tool Library milestone manifest. Tab-separated; one row per milestone; lists are comma-separated.
+# Milestones are cumulative: milestone N is complete when milestones 1 through N pass.
+milestone	slug	title	guide	files	todos	tests
+1	member-validation	Member validation	docs/milestones/1-member-validation.md	src/main/java/com/pep/toolshare/domain/Member.java	1	MemberDomainCompletionTest
+2	schema-constraints	Relational constraints	docs/milestones/2-schema-constraints.md	src/main/resources/db/schema.sql	2A,2B,2C,2D	SchemaCompletionTest
+3	member-crud	Member CRUD and mapping	docs/milestones/3-member-crud.md	src/main/java/com/pep/toolshare/member/JdbcMemberRepository.java	3A,3B,3C,3D	JdbcMemberRepositoryCompletionTest
+4	tool-lookup	Tool lookup and filtering	docs/milestones/4-tool-lookup.md	src/main/java/com/pep/toolshare/tool/JdbcToolRepository.java	4A,4B	JdbcToolRepositoryCompletionTest
+5	category-report	Category report	docs/milestones/5-category-report.md	src/main/java/com/pep/toolshare/tool/JdbcToolRepository.java	5	CategoryReportCompletionTest
+6	checkout-transaction	Atomic checkout and final run	docs/milestones/6-checkout-transaction.md	src/main/java/com/pep/toolshare/loan/LoanService.java	6	LoanServiceCompletionTest

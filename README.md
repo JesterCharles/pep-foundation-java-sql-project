@@ -26,7 +26,25 @@ mvn -q -Pcompletion test                     # learner contract: expected to fai
 ```
 
 The passing health build and failing completion profile are intentional starter behavior, not a broken setup.
-`./scripts/verify-starter.sh` confirms that each documented TODO area fails for the expected reason.
+`./scripts/verify-milestones.sh starter` confirms that health passes and every milestone fails in the untouched starter.
+
+## Milestones
+
+Work through six cumulative milestones in order. Each guide names the file and TODO markers to edit, the public tests
+that define the milestone, and the check to run. Milestone N is complete when `./scripts/verify-milestones.sh N`
+passes, which requires milestones 1 through N to pass.
+
+| Milestone | Guide | Check |
+| --- | --- | --- |
+| 1 | [Member validation](docs/milestones/1-member-validation.md) | `./scripts/verify-milestones.sh 1` |
+| 2 | [Relational constraints](docs/milestones/2-schema-constraints.md) | `./scripts/verify-milestones.sh 2` |
+| 3 | [Member CRUD and mapping](docs/milestones/3-member-crud.md) | `./scripts/verify-milestones.sh 3` |
+| 4 | [Tool lookup and filtering](docs/milestones/4-tool-lookup.md) | `./scripts/verify-milestones.sh 4` |
+| 5 | [Category report](docs/milestones/5-category-report.md) | `./scripts/verify-milestones.sh 5` |
+| 6 | [Atomic checkout and final run](docs/milestones/6-checkout-transaction.md) | `./scripts/verify-milestones.sh 6` |
+
+The same list is available in machine-readable form in [`docs/milestones/manifest.tsv`](docs/milestones/manifest.tsv).
+The check prints PASS or FAIL with test counts for every milestone; details are in `target/surefire-reports/`.
 
 ## What you will practice
 
@@ -45,20 +63,21 @@ The learning outcomes, expected prerequisites, and topics this project leaves ou
 
 Edit only these learner-owned TODO regions:
 
-| File | TODO |
-| --- | --- |
-| `src/main/java/com/pep/toolshare/domain/Member.java` | `TODO LEARNER 1`: required-value validation |
-| `src/main/resources/db/schema.sql` | `TODO LEARNER 2A`–`2D`: relational constraints |
-| `src/main/java/com/pep/toolshare/member/JdbcMemberRepository.java` | `TODO LEARNER 3A`–`3D`: member CRUD and mapping |
-| `src/main/java/com/pep/toolshare/tool/JdbcToolRepository.java` | `TODO LEARNER 4A`–`4C`: tool lookup and reports |
-| `src/main/java/com/pep/toolshare/loan/LoanService.java` | `TODO LEARNER 5`: atomic checkout transaction |
+| File | TODO | Milestone |
+| --- | --- | --- |
+| `src/main/java/com/pep/toolshare/domain/Member.java` | `TODO LEARNER 1`: required-value validation | 1 |
+| `src/main/resources/db/schema.sql` | `TODO LEARNER 2A`–`2D`: relational constraints | 2 |
+| `src/main/java/com/pep/toolshare/member/JdbcMemberRepository.java` | `TODO LEARNER 3A`–`3D`: member CRUD and mapping | 3 |
+| `src/main/java/com/pep/toolshare/tool/JdbcToolRepository.java` | `TODO LEARNER 4A`–`4B`: tool lookup and filtering | 4 |
+| `src/main/java/com/pep/toolshare/tool/JdbcToolRepository.java` | `TODO LEARNER 5`: category report | 5 |
+| `src/main/java/com/pep/toolshare/loan/LoanService.java` | `TODO LEARNER 6`: atomic checkout transaction | 6 |
 
 Keep method signatures and package names unchanged. Search with `grep -R "TODO LEARNER" src/main` to find every
 region.
 
 ## Supplied contract files
 
-Do not modify `pom.xml`, `.github/`, `scripts/`, `src/test/`, `src/main/java/com/pep/toolshare/App.java`, the
+Do not modify `pom.xml`, `.github/`, `scripts/`, `docs/`, `src/test/`, `src/main/java/com/pep/toolshare/App.java`, the
 `db` support classes, repository interfaces, supplied domain types, or `src/main/resources/db/seed.sql`. They provide
 the runnable shell, deterministic fixtures, and public executable contract. There are no hidden tests or grading
 secrets in this repository.
@@ -70,19 +89,22 @@ secrets in this repository.
 ./scripts/reset.sh                     # delete/recreate local schema and seed rows
 mvn -q compile exec:java               # print available tools and the category report
 mvn -q -Pcompletion test               # run every public learner-completion test
-./scripts/audit-public.sh              # scan tracked history for generated/private material
+./scripts/verify-milestones.sh N       # check milestones 1 through N (1-6)
+./scripts/audit-public.sh              # scan tracked Git history for generated/private material (needs a Git checkout)
 ```
 
 Reset replaces only the ignored `data/` database. Tests use separate in-memory databases and do not touch local data.
 
 ## Completion criteria
 
-You are done when:
+You are done when `./scripts/verify-milestones.sh 6` passes. It checks the same criteria:
 
 1. `mvn -q -Pcompletion test` passes;
 2. `mvn -q verify` still passes;
 3. reset followed by `mvn -q compile exec:java` prints three available tools and three category rows; and
 4. every `TODO LEARNER` marker in the five editable files has been replaced by your implementation.
+
+`./scripts/verify-milestones.sh 6` resets the local `data/` database as part of the final run check.
 
 ## Database note
 
@@ -101,3 +123,7 @@ features are not part of this project.
   local cache.
 - **Starter completion tests fail:** expected. Read the named public test and the matching TODO; use
   `target/surefire-reports/` for details.
+- **A milestone check fails:** the check lists every milestone with its test counts. Fix the earliest failing
+  milestone first; logs are in `target/milestone-check/`.
+- **`audit-public.sh` says no Git history was found:** expected in a downloaded copy without `.git`; the audit only
+  applies to a Git checkout.
