@@ -1,10 +1,7 @@
 # Objective map
 
-This project was reconciled against the public `main` branch of
-[`JesterCharles/pep-technology-content`](https://github.com/JesterCharles/pep-technology-content)
-at commit [`784b3fbce1c8ec538def9d364371ebb2ff89a80b`](https://github.com/JesterCharles/pep-technology-content/commit/784b3fbce1c8ec538def9d364371ebb2ff89a80b).
-The catalog declarations at that exact commit remain the canonical source. This file only summarizes the public
-objective groups chosen for this project; it does not reproduce assessments or answer material.
+This page lists what the project practices, what you should know before starting, and what it intentionally leaves
+out. It does not contain assessments or answers.
 
 ## Selected objective groups
 
@@ -40,7 +37,7 @@ inheritance, Mockito, logging configuration, PostgreSQL administration, environm
 `psql`, CSV loading, `generate_series`, DML `RETURNING`, CTEs, window functions, indexes, query plans, or concurrent
 transaction-isolation experiments.
 
-The taught PostgreSQL connection objective is adapted, not claimed in full: this repository uses embedded H2
-`2.3.232` in PostgreSQL compatibility mode so learners need no database server. The selected SQL is a portable subset,
-but H2 is not PostgreSQL. Identity-column syntax and the support reset command (`DROP ALL OBJECTS`) are H2-specific;
+PostgreSQL connections are adapted rather than practiced in full: the project uses an embedded local database in a
+PostgreSQL-compatible mode, so you need no database server. The SQL you write is a portable subset, but the embedded
+database is not PostgreSQL. The supplied identity columns and reset support are specific to the embedded database;
 PostgreSQL-specific tools, diagnostics, extensions, and planner behavior are outside this project.

@@ -38,7 +38,7 @@ The passing health build and failing completion profile are intentional starter 
 - commit or roll back a multi-statement checkout as one transaction;
 - test against a fresh isolated database and reset local data repeatably.
 
-The exact curriculum reconciliation and bounded database differences are in
+The learning outcomes, expected prerequisites, and topics this project leaves out are listed in
 [`docs/objective-map.md`](docs/objective-map.md).
 
 ## Your editable files
@@ -86,10 +86,10 @@ You are done when:
 
 ## Database note
 
-H2 `2.3.232` runs in PostgreSQL compatibility mode and stores local data under ignored `data/`. It honestly supports
-the selected constraints, CRUD, joins, aggregates, prepared statements, generated keys, and transactions, but it is
-not PostgreSQL. This project intentionally excludes PostgreSQL-only tools and features; see the objective map for the
-exact boundary.
+This project uses an embedded local database that runs inside the Java process. You do not install PostgreSQL or run
+any database server. Local data is stored in the `data/` directory, which Git ignores; run `./scripts/reset.sh` at
+any time to recreate it with the supplied seed data. The database runs in a PostgreSQL-compatible mode, so the SQL
+you write here is standard and portable, but PostgreSQL-only tools and features are not part of this project.
 
 ## Troubleshooting
 
