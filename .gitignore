@@ -1,0 +1,33 @@
+# Maven and Java output
+target/
+*.class
+
+# Local embedded database files
+data/
+*.mv.db
+*.trace.db
+*.lock.db
+
+# Local validation tools and scratch copies
+.local-tools/
+.fresh-copy/
+.proof/
+
+# Credentials and local environment files
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials*
+
+# IDEs and editors
+.idea/
+.vscode/
+*.iml
+*.swp
+*~
+
+# Operating system files
+.DS_Store
+Thumbs.db
