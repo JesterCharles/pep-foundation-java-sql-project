@@ -8,19 +8,6 @@ data/
 *.trace.db
 *.lock.db
 
-# Local validation tools and scratch copies
-.local-tools/
-.fresh-copy/
-.proof/
-
-# Credentials and local environment files
-.env
-.env.*
-!.env.example
-*.pem
-*.key
-credentials*
-
 # IDEs and editors
 .idea/
 .vscode/
@@ -31,3 +18,5 @@ credentials*
 # Operating system files
 .DS_Store
 Thumbs.db
+
+# TODO LEARNER 1A: ignore the local .env file (and any .env.* variant) but keep .env.example.

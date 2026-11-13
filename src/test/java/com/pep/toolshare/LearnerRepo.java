@@ -1,0 +1,218 @@
+package com.pep.toolshare;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
+/**
+ * Reads the learner's Git repository and work log. Checks only local state: it never contacts a server, and it does
+ * not depend on the remote's name or address. "Pushed" means your local copy of the remote branch (for example
+ * origin/main) contains your commits, which is true after a successful git push.
+ */
+public final class LearnerRepo {
+    public static final Path ROOT = Path.of("").toAbsolutePath();
+    public static final String MAIN = "main";
+
+    private LearnerRepo() {
+    }
+
+    public record Result(int exitCode, String out, String err) {
+        public List<String> lines() {
+            return out.isBlank() ? List.of() : Arrays.asList(out.strip().split("\\R"));
+        }
+    }
+
+    public static Result git(String... args) {
+        List<String> command = new ArrayList<>();
+        command.add("git");
+        command.add("-c");
+        command.add("core.quotepath=off");
+        command.addAll(Arrays.asList(args));
+        try {
+            Process process = new ProcessBuilder(command).directory(ROOT.toFile()).start();
+            process.getOutputStream().close();
+            byte[] out = process.getInputStream().readAllBytes();
+            byte[] err = process.getErrorStream().readAllBytes();
+            if (!process.waitFor(60, TimeUnit.SECONDS)) {
+                process.destroyForcibly();
+                fail("git " + String.join(" ", args) + " did not finish");
+            }
+            return new Result(process.exitValue(), new String(out, StandardCharsets.UTF_8),
+                    new String(err, StandardCharsets.UTF_8));
+        } catch (IOException exception) {
+            throw new AssertionError("Git is not installed or not on the PATH: " + exception.getMessage(), exception);
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new AssertionError("Interrupted while running git", exception);
+        }
+    }
+
+    private static boolean ok(String... args) {
+        return git(args).exitCode() == 0;
+    }
+
+    /** Fails with guidance unless this project folder is the top of a Git repository with a main branch. */
+    public static void requireRepository() {
+        Result top = git("rev-parse", "--show-toplevel");
+        assertTrue(top.exitCode() == 0,
+                "This project folder is not a Git repository. Work in the folder you cloned from your own "
+                        + "repository on the course Git server (it contains a .git folder).");
+        try {
+            assertTrue(Path.of(top.out().strip()).toRealPath().equals(ROOT.toRealPath()),
+                    "Run the checks from the top folder of your repository: " + top.out().strip());
+        } catch (IOException exception) {
+            throw new AssertionError(exception);
+        }
+        assertTrue(ok("rev-parse", "--verify", "--quiet", "refs/heads/" + MAIN),
+                "Your repository has no local branch named main.");
+    }
+
+    /** The commit that first added WORKLOG.md to main: the starting point you received. */
+    public static String baseline() {
+        List<String> adds = git("log", MAIN, "--diff-filter=A", "--format=%H", "--", "WORKLOG.md").lines();
+        assertTrue(!adds.isEmpty(), "WORKLOG.md is missing from the history of main.");
+        return adds.get(adds.size() - 1);
+    }
+
+    /** Commits on main made after the starting point, newest first. */
+    public static List<String> learnerCommitsOnMain(boolean includeMerges) {
+        List<String> args = new ArrayList<>(List.of("rev-list"));
+        if (!includeMerges) {
+            args.add("--no-merges");
+        }
+        args.add(baseline() + ".." + MAIN);
+        return git(args.toArray(String[]::new)).lines();
+    }
+
+    /** The remote main is pushed to, for example origin; fails with guidance when main has no upstream. */
+    public static String upstreamOfMain() {
+        Result upstream = git("rev-parse", "--abbrev-ref", "--symbolic-full-name", MAIN + "@{upstream}");
+        assertTrue(upstream.exitCode() == 0 && upstream.out().contains("/"),
+                "main has no upstream branch. Push it once with: git push -u origin main");
+        return upstream.out().strip();
+    }
+
+    public static void assertMainPushed() {
+        String upstream = upstreamOfMain();
+        assertTrue(ok("merge-base", "--is-ancestor", MAIN, upstream),
+                "main has commits that are not pushed yet. Run: git push   (then rerun the check)");
+    }
+
+    /**
+     * Milestone delivery: a branch named m{n}/something holds commits that change this milestone's files, it is
+     * merged into main, and both the branch and main are pushed.
+     */
+    public static void assertMilestoneBranchDelivered(int milestone, List<String> files) {
+        requireRepository();
+        String prefix = "m" + milestone + "/";
+        List<String> branches = git("for-each-ref", "--format=%(refname:short)", "refs/heads/" + prefix).lines();
+        assertTrue(!branches.isEmpty(), "Create a branch for this milestone, for example: git switch -c "
+                + prefix + "my-topic   (do the milestone's work and commits on it)");
+        List<String> codeFiles = files.stream().filter(file -> !file.equals("WORKLOG.md")).toList();
+        List<String> evidenceFiles = codeFiles.isEmpty() ? files : codeFiles;
+        String base = baseline();
+        String delivered = null;
+        for (String branch : branches) {
+            List<String> args = new ArrayList<>(List.of("rev-list", base + ".." + branch, "--"));
+            args.addAll(evidenceFiles);
+            boolean touches = !git(args.toArray(String[]::new)).lines().isEmpty();
+            if (touches && ok("merge-base", "--is-ancestor", branch, MAIN)) {
+                delivered = branch;
+                break;
+            }
+        }
+        assertTrue(delivered != null, "No " + prefix + "* branch has commits that change this milestone's files"
+                + " and is merged into main. Commit your work on " + branches.get(0)
+                + ", then: git switch main && git merge " + branches.get(0));
+        assertMainPushed();
+        String remote = upstreamOfMain().substring(0, upstreamOfMain().indexOf('/'));
+        String remoteBranch = remote + "/" + delivered;
+        assertTrue(ok("rev-parse", "--verify", "--quiet", "refs/remotes/" + remoteBranch)
+                        && ok("merge-base", "--is-ancestor", delivered, remoteBranch),
+                "Push your milestone branch too: git push -u " + remote + " " + delivered);
+    }
+
+    /** Fails when any of {@code files} has uncommitted changes. */
+    public static void assertCommitted(List<String> files) {
+        requireRepository();
+        List<String> args = new ArrayList<>(List.of("status", "--porcelain", "--untracked-files=all", "--"));
+        args.addAll(files);
+        List<String> dirty = git(args.toArray(String[]::new)).lines();
+        assertTrue(dirty.isEmpty(), "Commit (and push) these changes first: " + dirty);
+    }
+
+    /** Learner files of a milestone, read from docs/milestones/manifest.tsv. */
+    public static List<String> milestoneFiles(int milestone) {
+        try {
+            for (String line : Files.readAllLines(ROOT.resolve("docs/milestones/manifest.tsv"))) {
+                String[] columns = line.split("\t", -1);
+                if (columns.length > 4 && columns[0].equals(String.valueOf(milestone))) {
+                    return List.of(columns[4].split(","));
+                }
+            }
+        } catch (IOException exception) {
+            throw new AssertionError(exception);
+        }
+        throw new AssertionError("Milestone " + milestone + " is missing from the manifest");
+    }
+
+    // ---- WORKLOG.md -------------------------------------------------------------------------------------------
+
+    public static List<String> worklog() {
+        try {
+            return Files.readAllLines(ROOT.resolve("WORKLOG.md"));
+        } catch (IOException exception) {
+            throw new AssertionError("WORKLOG.md is missing", exception);
+        }
+    }
+
+    /** "Label: value" lines of the section that starts with {@code heading}, in order (labels may repeat). */
+    public static List<Map.Entry<String, String>> fields(String heading) {
+        List<Map.Entry<String, String>> found = new ArrayList<>();
+        boolean seen = false;
+        boolean inside = false;
+        for (String line : worklog()) {
+            if (line.startsWith("#")) {
+                inside = line.strip().equals(heading);
+                seen = seen || inside;
+                continue;
+            }
+            int colon = line.indexOf(':');
+            if (inside && colon > 0 && !line.startsWith(" ") && !line.startsWith("<")) {
+                found.add(Map.entry(line.substring(0, colon).strip(), line.substring(colon + 1).strip()));
+            }
+        }
+        assertTrue(seen, "WORKLOG.md has no section " + heading + " (keep the headings from the starter).");
+        return found;
+    }
+
+    /** True when a value is written in your own words: at least three words and no TODO marker. */
+    public static boolean filled(String value) {
+        return value != null && !value.contains("TODO") && value.strip().split("\\s+").length >= 3;
+    }
+
+    /** Asserts that the "### M{n}" entry has every field filled in. */
+    public static void assertEntryComplete(int milestone, List<String> extraFields) {
+        List<String> required = new ArrayList<>(List.of("Yesterday", "Today", "Blockers", "Story",
+                "Security check", "AI used", "I verified"));
+        required.addAll(extraFields);
+        Map<String, String> values = new LinkedHashMap<>();
+        for (Map.Entry<String, String> field : fields("### M" + milestone)) {
+            values.putIfAbsent(field.getKey(), field.getValue());
+        }
+        for (String name : required) {
+            assertTrue(filled(values.get(name)), "WORKLOG.md, ### M" + milestone + ": fill in \"" + name
+                    + ":\" with at least three words of your own (no TODO).");
+        }
+    }
+}

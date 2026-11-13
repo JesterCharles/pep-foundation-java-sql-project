@@ -22,7 +22,17 @@ if git ls-files | grep -Eq '(^|/)milestone-[0-9]+/'; then
     exit 1
 fi
 
-sensitive='(/Users/[^/]+/|BEGIN (RSA|OPENSSH|EC) PRIVATE KEY|gh[pousr]_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16})'
+if git ls-files | grep -Eq '(^|/)(AGENTS\.md|CLAUDE\.md|GEMINI\.md|\.claude/|\.cursor/|\.aider)'; then
+    echo "Tracked assistant-instruction file found; the learner snapshot is an ordinary project." >&2
+    exit 1
+fi
+
+if git ls-files -s -- bin/loan-summary.sh | grep -q '^100755'; then
+    echo "bin/loan-summary.sh must start non-executable; making it executable is a learner task." >&2
+    exit 1
+fi
+
+sensitive='(/Users/[^/]+/|/home/[^/]+/|BEGIN (RSA|OPENSSH|EC) PRIVATE KEY|gh[pousr]_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16})'
 if git grep -I -n -E "$sensitive" -- . ':!scripts/audit-public.sh'; then
     echo "Potential private path, key, or credential found in tracked files." >&2
     exit 1
