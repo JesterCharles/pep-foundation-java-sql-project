@@ -1,7 +1,7 @@
 # Milestone 4: HTTP API (Week 4)
 
-Due Friday of Week 4. It uses exceptions, logging, configuration, HTTP with Javalin, JUnit, Mockito and coverage
-from Weeks 3-4.
+Due Friday of Week 4. It checks what was taught from Thursday of Week 3 through Wednesday of Week 4: exceptions,
+logging, configuration, HTTP with Javalin, JUnit, Mockito and coverage.
 
 The desk staff want to work from a browser or `curl`, so the lending rules move into a service behind a small JSON API.
 Data still lives in memory this week; Week 5 swaps in the database without changing the service.
@@ -73,12 +73,15 @@ Try it by hand:
 ```bash
 set -a; source .env; set +a          # load your local settings
 mvn -q compile exec:java -Dexec.args=serve
-curl -i localhost:7070/tools/LT-1009-1
-curl -i -X POST localhost:7070/loans -H 'Content-Type: application/json' \
+curl -i http://127.0.0.1:7070/tools/LT-1009-1
+curl -i -X POST http://127.0.0.1:7070/loans -H 'Content-Type: application/json' \
   -d '{"memberId":"M-0006","toolCode":"LT-1007-8"}'
 ```
 
 ## Your own tests (4F, 4G)
+
+After you add Mockito to `pom.xml` (4F), run `./scripts/prefetch.sh` once while online so Maven downloads it; offline
+mode cannot fetch a new dependency.
 
 Write at least four `@Test` methods in `learner/LendingServiceTest.java`, each arranged, acted and asserted:
 

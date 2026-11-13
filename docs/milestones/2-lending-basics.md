@@ -1,6 +1,7 @@
 # Milestone 2: Lending basics (Week 2)
 
-Due Friday of Week 2. It uses the Java basics, methods, recursion, arrays, lists and maps from Weeks 1-2.
+Due Friday of Week 2. It checks what was taught from Thursday of Week 1 through Wednesday of Week 2: Java basics,
+methods, recursion, arrays, lists and maps.
 
 The desk needs reliable small calculations before any bigger feature can use them: late fees, money formatting, tool
 codes, searching and counting. Every method is in one class, and later milestones call them.

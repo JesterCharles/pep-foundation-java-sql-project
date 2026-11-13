@@ -12,6 +12,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 /** A fresh in-memory database with the project schema and seed data, separate from the local data/ folder. */
 public final class TestDatabase {
     private static final AtomicInteger NEXT_ID = new AtomicInteger();
+    private static final AtomicInteger CREATED = new AtomicInteger();
+    private static final AtomicInteger READS = new AtomicInteger();
 
     private TestDatabase() {
     }
@@ -25,7 +27,18 @@ public final class TestDatabase {
     public static ConnectionFactory create() {
         ConnectionFactory connections = ConnectionFactory.forUrl(newUrl());
         DatabaseManager.reset(connections);
+        CREATED.incrementAndGet();
         return connections;
+    }
+
+    /** How many databases {@link #create()} has made in this test run. */
+    public static int created() {
+        return CREATED.get();
+    }
+
+    /** How many times {@link #count} or {@link #text} has read a database back in this test run. */
+    public static int reads() {
+        return READS.get();
     }
 
     public static void execute(ConnectionFactory connections, String sql) throws SQLException {
@@ -36,6 +49,7 @@ public final class TestDatabase {
     }
 
     public static long count(ConnectionFactory connections, String sql) throws SQLException {
+        READS.incrementAndGet();
         try (Connection connection = connections.open();
              Statement statement = connection.createStatement();
              ResultSet rows = statement.executeQuery(sql)) {
@@ -45,6 +59,7 @@ public final class TestDatabase {
     }
 
     public static String text(ConnectionFactory connections, String sql) throws SQLException {
+        READS.incrementAndGet();
         try (Connection connection = connections.open();
              Statement statement = connection.createStatement();
              ResultSet rows = statement.executeQuery(sql)) {

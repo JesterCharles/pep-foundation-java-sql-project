@@ -1,7 +1,7 @@
 # Milestone 5: Database (Week 5)
 
-Due Friday of Week 5. It uses relational design, SQL CRUD, joins, aggregates, subqueries, CTEs, window functions,
-indexes and JDBC from Weeks 4-5.
+Due Friday of Week 5. It checks what was taught from Thursday of Week 4 through Wednesday of Week 5: relational
+design, SQL CRUD, joins, aggregates, subqueries, CTEs, window functions, indexes and JDBC.
 
 The library outgrows memory. The data moves into a relational database whose constraints protect it even when Java
 code is wrong, the repositories talk JDBC, checkouts become transactions, and managers get SQL reports.

@@ -16,8 +16,9 @@ trap 'rm -rf "$work"' EXIT
 usage() {
     cat >&2 <<'USAGE'
 Usage:
-  ./scripts/verify-milestones.sh <N>       check milestones 1 through N (1-6) in this repository
-  ./scripts/verify-milestones.sh starter   confirm the untouched starter: health passes, every milestone fails
+  ./scripts/verify-milestones.sh <N>        check milestones 1 through N (1-6) in this repository
+  ./scripts/verify-milestones.sh progress   show every milestone's PASS/FAIL; fails only if the health build fails
+  ./scripts/verify-milestones.sh starter    course maintainers: confirm the untouched starter snapshot
 USAGE
     exit 2
 }
@@ -125,10 +126,44 @@ learner_mode() {
     echo "Milestones 1-$target complete."
 }
 
+progress_mode() {
+    local m done_upto=0
+    check 0 0
+    for ((m = 1; m <= milestone_count; m++)); do
+        [[ ${passed[m]} -eq 1 ]] || break
+        done_upto=$m
+    done
+    if [[ $health_ok -ne 1 ]]; then
+        echo "The health build fails. Fix it first; log: $logs/health.log" >&2
+        exit 1
+    fi
+    if [[ $done_upto -eq 0 ]]; then
+        echo "Progress: no milestone complete yet."
+    else
+        echo "Progress: milestones 1-$done_upto pass. Run ./scripts/verify-milestones.sh $done_upto for the full check."
+    fi
+}
+
 starter_mode() {
     local m failed=0
     check 0 0
     [[ $health_ok -eq 1 ]] || failed=1
+    if [[ -x bin/loan-summary.sh ]] ||
+        { git rev-parse --is-inside-work-tree >/dev/null 2>&1 && git ls-files -s -- bin/loan-summary.sh | grep -q '^100755'; }; then
+        echo "Expected bin/loan-summary.sh to start non-executable; making it executable is a learner task." >&2
+        failed=1
+    fi
+    local assistant='(^|/)(AGENTS\.md|CLAUDE\.md|GEMINI\.md|\.claude/|\.cursor/|\.aider)'
+    local files
+    if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        files=$(git ls-files)
+    else
+        files=$(find . -path ./target -prune -o -print | sed 's|^\./||')
+    fi
+    if grep -Eq "$assistant" <<<"$files"; then
+        echo "Expected no assistant-instruction file in the starter snapshot." >&2
+        failed=1
+    fi
     for m in $(rows | cut -f1); do
         if [[ ${passed[m]} -ne 0 ]]; then
             echo "Expected milestone $m to fail in the untouched starter." >&2
@@ -146,5 +181,6 @@ starter_mode() {
 [[ $# -eq 1 ]] || usage
 case $1 in
     starter) starter_mode ;;
+    progress) progress_mode ;;
     *) learner_mode "$1" ;;
 esac

@@ -110,19 +110,25 @@ public final class LearnerRepo {
 
     /**
      * Milestone delivery: a branch named m{n}/something holds commits that change this milestone's files, it is
-     * merged into main, and both the branch and main are pushed.
+     * merged into main, and both the branch and main are pushed. After a merge you may delete the local branch
+     * (git branch -d): the pushed copy of the branch, for example origin/m{n}/something, then counts instead.
      */
     public static void assertMilestoneBranchDelivered(int milestone, List<String> files) {
         requireRepository();
         String prefix = "m" + milestone + "/";
-        List<String> branches = git("for-each-ref", "--format=%(refname:short)", "refs/heads/" + prefix).lines();
-        assertTrue(!branches.isEmpty(), "Create a branch for this milestone, for example: git switch -c "
-                + prefix + "my-topic   (do the milestone's work and commits on it)");
+        String remote = remoteOfMain();
+        List<String> local = git("for-each-ref", "--format=%(refname:short)", "refs/heads/" + prefix).lines();
+        List<String> pushed = remote == null ? List.of()
+                : git("for-each-ref", "--format=%(refname:short)", "refs/remotes/" + remote + "/" + prefix).lines();
+        assertTrue(!local.isEmpty() || !pushed.isEmpty(), "Create a branch for this milestone, for example: "
+                + "git switch -c " + prefix + "my-topic   (do the milestone's work and commits on it)");
         List<String> codeFiles = files.stream().filter(file -> !file.equals("WORKLOG.md")).toList();
         List<String> evidenceFiles = codeFiles.isEmpty() ? files : codeFiles;
         String base = baseline();
         String delivered = null;
-        for (String branch : branches) {
+        List<String> candidates = new ArrayList<>(local);
+        candidates.addAll(pushed);
+        for (String branch : candidates) {
             List<String> args = new ArrayList<>(List.of("rev-list", base + ".." + branch, "--"));
             args.addAll(evidenceFiles);
             boolean touches = !git(args.toArray(String[]::new)).lines().isEmpty();
@@ -131,15 +137,27 @@ public final class LearnerRepo {
                 break;
             }
         }
+        String example = local.isEmpty() ? prefix + "my-topic" : local.get(0);
         assertTrue(delivered != null, "No " + prefix + "* branch has commits that change this milestone's files"
-                + " and is merged into main. Commit your work on " + branches.get(0)
-                + ", then: git switch main && git merge " + branches.get(0));
+                + " and is merged into main. Commit your work on " + example
+                + ", then: git switch main && git merge " + example);
         assertMainPushed();
-        String remote = upstreamOfMain().substring(0, upstreamOfMain().indexOf('/'));
-        String remoteBranch = remote + "/" + delivered;
-        assertTrue(ok("rev-parse", "--verify", "--quiet", "refs/remotes/" + remoteBranch)
-                        && ok("merge-base", "--is-ancestor", delivered, remoteBranch),
-                "Push your milestone branch too: git push -u " + remote + " " + delivered);
+        if (local.contains(delivered)) {
+            String remoteBranch = remote + "/" + delivered;
+            assertTrue(ok("rev-parse", "--verify", "--quiet", "refs/remotes/" + remoteBranch)
+                            && ok("merge-base", "--is-ancestor", delivered, remoteBranch),
+                    "Push your milestone branch too: git push -u " + remote + " " + delivered);
+        }
+    }
+
+    /** The remote name of main's upstream (for example origin), or null when main has no upstream yet. */
+    private static String remoteOfMain() {
+        Result upstream = git("rev-parse", "--abbrev-ref", "--symbolic-full-name", MAIN + "@{upstream}");
+        if (upstream.exitCode() != 0 || !upstream.out().contains("/")) {
+            return null;
+        }
+        String name = upstream.out().strip();
+        return name.substring(0, name.indexOf('/'));
     }
 
     /** Fails when any of {@code files} has uncommitted changes. */

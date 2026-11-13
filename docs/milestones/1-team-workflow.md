@@ -1,6 +1,7 @@
 # Milestone 1: Team workflow (Week 1)
 
-Due Friday of Week 1. It uses the shell, Git and AI-assistant practices from Week 1.
+Due Friday of Week 1. It checks what was taught through Wednesday of Week 1: the shell, Git and AI-assistant
+practices.
 
 You join the Lantern Tool Library team. Before anyone writes Java, the team needs a safe repository, a small shell
 tool, user stories, and a habit of reviewing assistant output with evidence.
@@ -17,6 +18,10 @@ tool, user stories, and a habit of reviewing assistant output with evidence.
 
 Checks: `LoanSummaryScriptCompletionTest`, `SecretHygieneCompletionTest`, `WorklogStoriesCompletionTest`,
 `GitHistoryCompletionTest` and `M1DeliveryCompletionTest`.
+
+**Timing.** Do all of the work below with the shell and Git on Days 1-3. The check itself is a Java program, so it
+runs once you have installed Java and Maven on Thursday of Week 1: then run `./scripts/prefetch.sh` once while online,
+and run the check before Friday's deadline.
 
 ## 1. Look around with the shell
 
@@ -63,7 +68,8 @@ Rules:
 - `Location:` shows the exported `LANTERN_LOCATION` variable, or `(not set)` when it is missing.
   Try `export LANTERN_LOCATION="Riverside branch"` and run the script again.
 - A missing log file prints `No such log file: <path>` to standard error, prints nothing else, and exits with
-  status 2.
+  status 2. This check is already written for you at the top of the script (an `if` block); keep it above your
+  summary.
 
 Make the script executable with `chmod 750 bin/loan-summary.sh` and commit that change too; Git stores the
 executable bit.

@@ -10,20 +10,18 @@ import com.pep.toolshare.reports.InventoryAnalytics;
 import com.pep.toolshare.reports.ToolUsage;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
-import java.nio.file.Files;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Optional;
-import java.util.regex.Pattern;
+import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Week 6: lambdas, method references, Optional and stream collectors over the loaded sample data. */
 class InventoryAnalyticsCompletionTest {
@@ -92,14 +90,64 @@ class InventoryAnalyticsCompletionTest {
     }
 
     @Test
-    void analyticsAreWrittenAsStreamPipelines() throws IOException {
-        String source = Files.readString(LearnerRepo.ROOT.resolve(
-                "src/main/java/com/pep/toolshare/reports/InventoryAnalytics.java"));
-        String code = source.replaceAll("(?s)/\\*.*?\\*/", "").replaceAll("//[^\\n]*", "");
-        assertFalse(Pattern.compile("\\b(for|while)\\s*\\(").matcher(code).find(),
-                "InventoryAnalytics must use streams, not for or while loops");
-        assertTrue(code.contains(".stream()") && code.contains("Collectors."),
-                "use stream() pipelines with Collectors");
-        assertTrue(code.contains("::"), "use at least one method reference");
+    void analyticsReadTheirInputsThroughStreams() {
+        List<Tool> streamTools = new StreamOnlyList<>(tools);
+        List<Loan> streamLoans = new StreamOnlyList<>(loans);
+        assertEquals(InventoryAnalytics.indexByCode(tools), InventoryAnalytics.indexByCode(streamTools));
+        assertEquals(InventoryAnalytics.loansPerCategory(loans, tools),
+                InventoryAnalytics.loansPerCategory(streamLoans, streamTools));
+        assertEquals(InventoryAnalytics.mostBorrowed(loans, tools, 3),
+                InventoryAnalytics.mostBorrowed(streamLoans, streamTools, 3));
+        assertEquals(InventoryAnalytics.longestOverdue(loans, Fixtures.TODAY),
+                InventoryAnalytics.longestOverdue(streamLoans, Fixtures.TODAY));
+        assertEquals(InventoryAnalytics.feesByMember(loans), InventoryAnalytics.feesByMember(streamLoans));
+        assertEquals(InventoryAnalytics.toolCodesByShelf(tools), InventoryAnalytics.toolCodesByShelf(streamTools));
+    }
+
+    /** A list that can only be read with stream(): loops, get, forEach and toArray stop with a hint. */
+    private static final class StreamOnlyList<T> extends ArrayList<T> {
+        StreamOnlyList(List<T> items) {
+            super(items);
+        }
+
+        private static AssertionError loop() {
+            return new AssertionError("InventoryAnalytics must read its lists with stream() pipelines, not with "
+                    + "for/while loops, get(i), forEach or a copy of the list");
+        }
+
+        @Override
+        public Iterator<T> iterator() {
+            throw loop();
+        }
+
+        @Override
+        public ListIterator<T> listIterator() {
+            throw loop();
+        }
+
+        @Override
+        public ListIterator<T> listIterator(int index) {
+            throw loop();
+        }
+
+        @Override
+        public T get(int index) {
+            throw loop();
+        }
+
+        @Override
+        public void forEach(Consumer<? super T> action) {
+            throw loop();
+        }
+
+        @Override
+        public Object[] toArray() {
+            throw loop();
+        }
+
+        @Override
+        public <A> A[] toArray(A[] array) {
+            throw loop();
+        }
     }
 }

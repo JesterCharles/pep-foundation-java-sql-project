@@ -3,17 +3,32 @@ package com.pep.toolshare;
 import com.pep.toolshare.domain.Dates;
 import com.pep.toolshare.domain.MemberTier;
 import com.pep.toolshare.reports.WaitListBoard;
+import io.javalin.Javalin;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
+import java.net.Socket;
+import java.net.SocketException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Starter health: the supplied files are present and the supplied helpers work before any TODO is done. */
@@ -52,5 +67,39 @@ class ProjectHealthTest {
         }
         String help = captured.toString(java.nio.charset.StandardCharsets.UTF_8);
         assertTrue(help.contains("reset") && help.contains("report") && help.contains("serve"), help);
+    }
+
+    @Test
+    void theServerListensOnThisComputerOnly() throws Exception {
+        Javalin app = Javalin.create(config -> config.routes.get("/ping", ctx -> ctx.result("pong")));
+        App.listen(app, 0);
+        try {
+            HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
+            HttpResponse<String> reply = client.send(HttpRequest.newBuilder(
+                    URI.create("http://127.0.0.1:" + app.port() + "/ping")).build(), HttpResponse.BodyHandlers.ofString());
+            assertEquals("pong", reply.body());
+            for (InetAddress address : nonLoopbackAddresses()) {
+                try (Socket socket = new Socket()) {
+                    assertThrows(IOException.class, () -> socket.connect(new InetSocketAddress(address, app.port()), 2000),
+                            "the API must not accept connections on " + address.getHostAddress());
+                }
+            }
+        } finally {
+            app.stop();
+        }
+    }
+
+    private static List<InetAddress> nonLoopbackAddresses() throws SocketException {
+        List<InetAddress> addresses = new ArrayList<>();
+        for (NetworkInterface network : Collections.list(NetworkInterface.getNetworkInterfaces())) {
+            if (network.isUp() && !network.isLoopback()) {
+                for (InetAddress address : Collections.list(network.getInetAddresses())) {
+                    if (address instanceof Inet4Address) {
+                        addresses.add(address);
+                    }
+                }
+            }
+        }
+        return addresses;
     }
 }

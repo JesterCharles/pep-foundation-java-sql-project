@@ -12,39 +12,45 @@ cloud account, external database server or real credential.
 
 ## Prerequisites
 
-- JDK 25 (`java -version`)
-- Apache Maven 3.9 or newer (`mvn -v`)
-- Git 2.38 or newer (`git --version`)
-- A terminal with `bash`, and `curl` for trying the API
-
-The first Maven build downloads the project's libraries from Maven Central, so it needs network access once. After
-that, everything runs offline.
+- From Day 1: Git 2.38 or newer (`git --version`) and a terminal with `bash`.
+- From Thursday of Week 1, when the course installs them: JDK 25 (`java -version`) and Apache Maven 3.9 or newer
+  (`mvn -v`).
+- From Week 4: `curl` for trying the API.
 
 ## Start
 
-You already cloned your own copy of this project from the course Git server. In a terminal, go to its top folder
-(the one with this `README.md`) and run:
+You already cloned your own copy of this project from the course Git server. The Milestone 1 work needs only Git and
+the shell, so start with its [guide](docs/milestones/1-team-workflow.md) on Day 1.
+
+Once Java and Maven are installed, go to the project's top folder (the one with this `README.md`) and run:
 
 ```bash
-mvn -q verify                    # starter health: passes
-./scripts/verify-milestones.sh starter
+./scripts/prefetch.sh                       # once, while online
+mvn -q verify                               # starter health: passes
+./scripts/verify-milestones.sh progress     # every milestone shows FAIL at the start
 ```
 
 `mvn -q verify` passing while every milestone fails is the expected starting point, not a broken setup.
 
+`./scripts/prefetch.sh` runs every Maven command of this project once, so Maven downloads all the libraries and build
+plugins they use from Maven Central. After that, every command in this README also works without a network
+connection: first run `export MAVEN_ARGS=-o` (Maven offline mode) in that terminal. Run `./scripts/prefetch.sh` again,
+online, whenever you add a dependency to `pom.xml` (Milestone 4 adds Mockito).
+
 ## Milestones
 
-Each milestone is due on Friday and uses what was taught through that week. Milestone N is complete when
+Each milestone is due on Friday and checks only what was taught through Wednesday of that week: the lessons from the
+previous Thursday through that Wednesday, plus everything earlier. Milestone N is complete when
 `./scripts/verify-milestones.sh N` passes, which includes milestones 1 through N.
 
-| Week | Milestone | Check |
-| --- | --- | --- |
-| 1 | [Team workflow: Linux, Git and AI](docs/milestones/1-team-workflow.md) | `./scripts/verify-milestones.sh 1` |
-| 2 | [Lending basics: Java, methods and arrays](docs/milestones/2-lending-basics.md) | `./scripts/verify-milestones.sh 2` |
-| 3 | [Domain model: classes, interfaces and inheritance](docs/milestones/3-domain-model.md) | `./scripts/verify-milestones.sh 3` |
-| 4 | [HTTP API: exceptions, Javalin and testing](docs/milestones/4-http-api.md) | `./scripts/verify-milestones.sh 4` |
-| 5 | [Database: SQL design, reports and JDBC](docs/milestones/5-database.md) | `./scripts/verify-milestones.sh 5` |
-| 6 | [Final delivery: collections, streams and integration](docs/milestones/6-final-delivery.md) | `./scripts/verify-milestones.sh 6` |
+| Due | Milestone | Checks lessons taught | Check |
+| --- | --- | --- | --- |
+| Friday, Week 1 | [Team workflow: Linux, Git and AI](docs/milestones/1-team-workflow.md) | Week 1 Monday-Wednesday | `./scripts/verify-milestones.sh 1` |
+| Friday, Week 2 | [Lending basics: Java, methods and arrays](docs/milestones/2-lending-basics.md) | Week 1 Thursday-Week 2 Wednesday | `./scripts/verify-milestones.sh 2` |
+| Friday, Week 3 | [Domain model: classes, interfaces and inheritance](docs/milestones/3-domain-model.md) | Week 2 Thursday-Week 3 Wednesday | `./scripts/verify-milestones.sh 3` |
+| Friday, Week 4 | [HTTP API: exceptions, Javalin and testing](docs/milestones/4-http-api.md) | Week 3 Thursday-Week 4 Wednesday | `./scripts/verify-milestones.sh 4` |
+| Friday, Week 5 | [Database: SQL design, reports and JDBC](docs/milestones/5-database.md) | Week 4 Thursday-Week 5 Wednesday | `./scripts/verify-milestones.sh 5` |
+| Friday, Week 6 (Checkpoint day) | [Final delivery: collections, streams and integration](docs/milestones/6-final-delivery.md) | Week 5 Thursday-Week 6 Wednesday | `./scripts/verify-milestones.sh 6` |
 
 The check prints PASS or FAIL with test counts for every milestone. Fix the earliest FAIL first; details are in
 `target/milestone-check/` and `target/surefire-reports/`.
@@ -52,6 +58,17 @@ The check prints PASS or FAIL with test counts for every milestone. Fix the earl
 Every milestone is delivered the same way: work on a branch named `m<N>/<topic>` (for example `m2/lending-basics`),
 commit in small steps, push the branch, merge it into `main`, push `main`, and fill in that week's entry in
 `WORKLOG.md`. The checks read your local Git history, so they work with any remote name or server address.
+
+## Time and pace
+
+The course schedule gives the project 280 minutes of class time: 160 minutes of milestone sessions (20-30 minutes per
+milestone) and a 120-minute session on Day 29 to finish Milestone 6 and record your walkthrough. Completing the
+project takes longer than that: plan on roughly 22 to 40 hours over the six weeks, and expect your own pace to differ
+from anyone else's. That is intended. The platform gives you additional time to complete and catch up on milestones,
+and your trainer may ask how long each milestone took; that feedback is used to check and adjust this plan.
+
+Because the project builds on itself every week, steady and complete work shows. Milestone 6 with your walkthrough is
+part of the Week 6 Checkpoint score, which is used for Fast Track selection.
 
 ## Your files
 
@@ -69,10 +86,12 @@ mvn -q verify                                       # compile and run the health
 mvn -q -Pcompletion test                            # run every milestone check
 mvn -q -Pcompletion test -Dtest=LendingMathCompletionTest   # run one check class
 ./scripts/verify-milestones.sh N                    # check milestones 1 through N
+./scripts/verify-milestones.sh progress             # show PASS/FAIL for every milestone
+./scripts/prefetch.sh                               # download everything once, so you can work offline
 ./scripts/reset.sh                                  # recreate the local database in data/ with sample data
 ./scripts/sql.sh                                    # SQL shell on the local database
 mvn -q compile exec:java -Dexec.args="report 2026-10-15"     # print the database reports
-mvn -q compile exec:java -Dexec.args=serve          # start the API on http://localhost:7070
+mvn -q compile exec:java -Dexec.args=serve          # start the API on http://127.0.0.1:7070 (this computer only)
 mvn -q -Pcoverage verify                            # coverage report in target/site/jacoco/index.html
 ```
 
@@ -89,13 +108,19 @@ instead of `psql` (no backslash commands such as `\dt`; use `SHOW TABLES;`), and
 ## Platform import
 
 For course platforms that create one repository per learner: import this repository's default branch `main` as a
-single snapshot. Nothing else is required: no extra branches, tags, history, secrets, services or network access at
-run time. The checks work with any repository owner, URL or remote name.
+single snapshot. Nothing else is required: no extra branches, tags, history, secrets or services, and no network access
+at run time after the one-time `./scripts/prefetch.sh`. The checks work with any repository owner, URL or remote name.
+
+The included CI workflow (`.github/workflows/ci.yml`) works at every stage of the project: it runs the health build,
+prints the milestone progress report (unfinished milestones do not fail it), and runs a privacy scan of the
+repository.
 
 ## Troubleshooting
 
 - **Wrong Java version:** make JDK 25 your active `JAVA_HOME`, then rerun `java -version` and `mvn -v`.
-- **Dependencies cannot download:** run the first Maven command once with network access.
+- **Dependencies cannot download:** connect to the network and run `./scripts/prefetch.sh` once.
+- **"Cannot access ... in offline mode":** that file was never downloaded. Run `unset MAVEN_ARGS`, connect, and run
+  `./scripts/prefetch.sh` once.
 - **`git merge-tree` error in a check:** update Git to 2.38 or newer.
 - **"main has no upstream branch":** push once with `git push -u origin main`.
 - **Port already in use:** stop the other server, or set `LANTERN_PORT` to another port.

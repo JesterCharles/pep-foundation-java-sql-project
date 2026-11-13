@@ -29,11 +29,14 @@ import java.util.List;
  * <pre>
  * reset            recreate the local database with the synthetic sample data
  * report [DATE]    print the database reports as of DATE (default: today), for example 2026-10-15
- * serve            start the JSON API on http://localhost:$LANTERN_PORT (default 7070)
+ * serve            start the JSON API on http://127.0.0.1:$LANTERN_PORT (default 7070), this computer only
  * sql              open an interactive SQL shell on the local database
  * </pre>
  */
 public final class App {
+    /** The API listens on the loopback address only, so other computers on the network cannot reach it. */
+    static final String HOST = "127.0.0.1";
+
     private App() {
     }
 
@@ -52,7 +55,7 @@ public final class App {
         System.out.println("Lantern Tool Library (fictional). Commands:");
         System.out.println("  reset            recreate the local database with the synthetic sample data");
         System.out.println("  report [DATE]    print the database reports as of DATE, for example 2026-10-15");
-        System.out.println("  serve            start the JSON API on http://localhost:$LANTERN_PORT (default 7070)");
+        System.out.println("  serve            start the JSON API on http://127.0.0.1:$LANTERN_PORT (default 7070)");
         System.out.println("  sql              open an interactive SQL shell on the local database");
     }
 
@@ -121,13 +124,18 @@ public final class App {
                 LocalDate::now);
         Javalin app = LanternApi.create(service, stores.reports(), config, LocalDate::now);
         try {
-            app.start(config.port());
+            listen(app, config.port());
         } catch (RuntimeException exception) {
             System.err.println("Could not start on port " + config.port() + ": " + exception.getMessage());
             System.err.println("If the address is already in use, stop the other server or set LANTERN_PORT.");
             System.exit(1);
         }
-        System.out.println("Lantern API listening on http://localhost:" + app.port() + " with " + config);
+        System.out.println("Lantern API listening on http://" + HOST + ":" + app.port() + " with " + config);
         System.out.println("Press Ctrl+C to stop.");
+    }
+
+    /** Starts {@code app} on {@link #HOST} and {@code port} (0 = any free port). */
+    static Javalin listen(Javalin app, int port) {
+        return app.start(HOST, port);
     }
 }

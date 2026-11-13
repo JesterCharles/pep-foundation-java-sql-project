@@ -7,6 +7,12 @@ set -euo pipefail
 
 log=${1:-fixtures/loan-log.txt}
 
+# Supplied: a missing log file is an error (message on standard error, exit status 2).
+if [[ ! -f $log ]]; then
+    echo "No such log file: $log" >&2
+    exit 2
+fi
+
 # TODO LEARNER 1C: replace these two lines with the summary (use grep, grep -i, grep -v, pipes and wc -l).
 echo "Loan log: $log"
 echo "TODO LEARNER 1C: summary not written yet" >&2

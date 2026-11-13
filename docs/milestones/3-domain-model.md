@@ -1,7 +1,7 @@
 # Milestone 3: Domain model (Week 3)
 
-Due Friday of Week 3. It uses classes and objects, enums, null handling, equality, inheritance, interfaces,
-composition, records and functional interfaces from Weeks 2-3.
+Due Friday of Week 3. It checks what was taught from Thursday of Week 2 through Wednesday of Week 3: classes and
+objects, enums, null handling, equality, inheritance, interfaces, composition, records and functional interfaces.
 
 Now the library's ideas become objects that protect their own rules: a member always has a valid email, a tool can
 only move between allowed states, and each membership tier has its own fee policy.

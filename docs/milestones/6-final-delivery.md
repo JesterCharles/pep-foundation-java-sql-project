@@ -1,7 +1,9 @@
 # Milestone 6: Final delivery (Week 6)
 
-Due Friday of Week 6. It uses the SQL and JDBC review, collections, generics, lambdas, method references, `Optional`
-and streams from Weeks 5-6, and brings every earlier milestone together.
+Due Friday of Week 6, the Checkpoint day (Day 30). It checks what was taught from Thursday of Week 5 through
+Wednesday of Week 6: the SQL and JDBC review, collections, generics, lambdas, method references, `Optional` and
+streams, and it brings every earlier milestone together. Day 29 is a scheduled session for finishing it and recording
+your walkthrough; the finished milestone and walkthrough count toward the Checkpoint.
 
 The library is ready for its first real week: members can queue for busy tools, returned tools are shelved from a
 cart, managers get analytics and reports over HTTP, and everything survives a restart on the database.
