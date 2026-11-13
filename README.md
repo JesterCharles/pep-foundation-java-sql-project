@@ -89,7 +89,8 @@ You are done when:
 This project uses an embedded local database that runs inside the Java process. You do not install PostgreSQL or run
 any database server. Local data is stored in the `data/` directory, which Git ignores; run `./scripts/reset.sh` at
 any time to recreate it with the supplied seed data. The database runs in a PostgreSQL-compatible mode, so the SQL
-you write here is standard and portable, but PostgreSQL-only tools and features are not part of this project.
+you practice here is a portable subset, but the embedded database is not PostgreSQL, and PostgreSQL-only tools and
+features are not part of this project.
 
 ## Troubleshooting
 
