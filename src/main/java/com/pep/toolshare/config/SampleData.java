@@ -11,16 +11,25 @@ import com.pep.toolshare.lending.InMemoryMemberRepository;
 import com.pep.toolshare.lending.InMemoryToolRepository;
 
 import java.time.LocalDate;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * The synthetic Lantern Tool Library data held in memory. It matches {@code src/main/resources/db/seed.sql} row for
  * row, so the in-memory and database stores start from the same state.
  */
 public final class SampleData {
+    private static final AtomicInteger IN_MEMORY_CREATED = new AtomicInteger();
+
     private SampleData() {
     }
 
+    /** How many times {@link #inMemory()} has run in this program; the completion checks read it. */
+    public static int inMemoryCreated() {
+        return IN_MEMORY_CREATED.get();
+    }
+
     public static Stores inMemory() {
+        IN_MEMORY_CREATED.incrementAndGet();
         InMemoryMemberRepository members = new InMemoryMemberRepository();
         InMemoryToolRepository tools = new InMemoryToolRepository();
         InMemoryLoanRepository loans = new InMemoryLoanRepository(tools, members);

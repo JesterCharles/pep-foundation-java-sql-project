@@ -1,5 +1,6 @@
 package com.pep.toolshare;
 
+import com.pep.toolshare.config.SampleData;
 import jdk.jfr.Recording;
 import jdk.jfr.consumer.RecordedEvent;
 import jdk.jfr.consumer.RecordedFrame;
@@ -33,8 +34,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Runs one of your own test classes and records what the run actually did: how many tests ran and passed, which tests
- * used Mockito mocks, whether stubbings and verifications happened, how many fresh test databases were created and
- * read back, and which refusals (LendingException and its subclasses) your tests triggered and handled.
+ * called Mockito mocks and which used the in-memory sample data instead, whether stubbings and verifications happened,
+ * how many fresh test databases were created and read back, and which refusals (LendingException and its subclasses)
+ * the code under test threw while your tests ran.
  */
 public final class LearnerTests {
     private static final String LENDING_EXCEPTION = "com.pep.toolshare.lending.LendingException";
@@ -45,13 +47,16 @@ public final class LearnerTests {
     /** What one run of a learner test class did. */
     public record Run(String simpleName, long found, long succeeded, long failed, String failures,
                       boolean mockitoPresent, int mocksCreated, int usedStubbings, int verifications,
-                      int passingTestsWithMocks, int passingTestsWithoutMocks, int databasesCreated,
+                      int passingTestsWithMocks, int passingFakeTests, int databasesCreated,
                       int databaseReads, List<String> refusalsHandled) {
     }
 
-    /** Runs {@code className}; asserts at least {@code minimum} tests ran and all passed. */
-    public static Run assertRunsAndPasses(String className, int minimum) {
-        Run run = run(className);
+    /**
+     * Runs {@code className}; asserts at least {@code minimum} tests ran and all passed. A refusal counts only when
+     * {@code thrower} (the class under test) threw it, not when the test or one of its mocks created it.
+     */
+    public static Run assertRunsAndPasses(String className, int minimum, String thrower) {
+        Run run = run(className, thrower);
         assertTrue(run.found() >= minimum, run.simpleName() + " needs at least " + minimum
                 + " @Test methods; found " + run.found());
         assertEquals(0, run.failed(), "your tests must pass:\n" + run.failures());
@@ -61,7 +66,7 @@ public final class LearnerTests {
     }
 
     /** Runs {@code className} through the JUnit Platform and records the evidence described above. */
-    public static Run run(String className) {
+    public static Run run(String className, String thrower) {
         Class<?> type;
         try {
             type = Class.forName(className);
@@ -69,7 +74,7 @@ public final class LearnerTests {
             throw new AssertionError("Missing test class " + className, exception);
         }
         MockitoProbe mockito = MockitoProbe.attach();
-        PerTest perTest = new PerTest(mockito);
+        PerTest perTest = new PerTest(mockito, thrower);
         SummaryGeneratingListener summaryListener = new SummaryGeneratingListener();
         int createdBefore = TestDatabase.created();
         int readsBefore = TestDatabase.reads();
@@ -95,9 +100,9 @@ public final class LearnerTests {
         return new Run(type.getSimpleName(), summary.getTestsFoundCount(), summary.getTestsSucceededCount(),
                 summary.getTotalFailureCount(), failures.toString(), mockito != null,
                 mockito == null ? 0 : mockito.mocks.size(), mockito == null ? 0 : mockito.usedStubbings(),
-                mockito == null ? 0 : mockito.verifications, perTest.withMocks, perTest.withoutMocks,
+                mockito == null ? 0 : mockito.verifications, perTest.withMocks, perTest.fakes,
                 TestDatabase.created() - createdBefore, TestDatabase.reads() - readsBefore,
-                refusalsHandled(exceptions, className));
+                refusalsHandled(exceptions, className, thrower));
     }
 
     private static List<RecordedEvent> read(Recording recording) {
@@ -114,8 +119,11 @@ public final class LearnerTests {
         }
     }
 
-    /** LendingException types that were created while one of your test methods was running. */
-    private static List<String> refusalsHandled(List<RecordedEvent> events, String className) {
+    /**
+     * LendingException types that {@code thrower} created while one of your test methods was running: reading the
+     * stack from the new exception outwards, a frame of {@code thrower} comes before any frame of your test class.
+     */
+    private static List<String> refusalsHandled(List<RecordedEvent> events, String className, String thrower) {
         Class<?> lendingException;
         try {
             lendingException = Class.forName(LENDING_EXCEPTION);
@@ -138,10 +146,15 @@ public final class LearnerTests {
             if (!refusal) {
                 continue;
             }
+            boolean thrownByCodeUnderTest = false;
             for (RecordedFrame frame : event.getStackTrace().getFrames()) {
                 String owner = frame.getMethod().getType().getName();
-                if (owner.equals(className) || owner.startsWith(className + "$")) {
-                    found.add(thrown.substring(thrown.lastIndexOf('.') + 1));
+                if (owns(thrower, owner)) {
+                    thrownByCodeUnderTest = true;
+                } else if (owns(className, owner)) {
+                    if (thrownByCodeUnderTest) {
+                        found.add(thrown.substring(thrown.lastIndexOf('.') + 1));
+                    }
                     break;
                 }
             }
@@ -149,15 +162,35 @@ public final class LearnerTests {
         return found;
     }
 
-    /** Counts, per finished test, the mocks created since the previous test finished. */
+    private static boolean owns(String type, String owner) {
+        return owner.equals(type) || owner.startsWith(type + "$");
+    }
+
+    /**
+     * Per passing test: did the code under test call a Mockito mock, and did the test build the in-memory sample data
+     * without any mock being called (a fake)? Mocks created but never called, for example in a field, do not count,
+     * and neither do calls your test makes on a mock directly.
+     */
     private static final class PerTest implements TestExecutionListener {
         private final MockitoProbe mockito;
-        private int seen;
+        private final String thrower;
+        private int callsSeen;
+        private int allCallsSeen;
+        private int storesSeen = SampleData.inMemoryCreated();
         private int withMocks;
-        private int withoutMocks;
+        private int fakes;
 
-        PerTest(MockitoProbe mockito) {
+        PerTest(MockitoProbe mockito, String thrower) {
             this.mockito = mockito;
+            this.thrower = thrower;
+        }
+
+        @Override
+        public void executionStarted(TestIdentifier test) {
+            if (test.isTest()) {
+                callsSeen = mockito == null ? 0 : mockito.calls(thrower);
+                allCallsSeen = mockito == null ? 0 : mockito.calls(null);
+            }
         }
 
         @Override
@@ -165,15 +198,17 @@ public final class LearnerTests {
             if (!test.isTest()) {
                 return;
             }
-            int now = mockito == null ? 0 : mockito.mocks.size();
+            int calls = mockito == null ? 0 : mockito.calls(thrower);
+            int allCalls = mockito == null ? 0 : mockito.calls(null);
+            int stores = SampleData.inMemoryCreated();
             if (result.getStatus() == TestExecutionResult.Status.SUCCESSFUL) {
-                if (now > seen) {
+                if (calls > callsSeen) {
                     withMocks++;
-                } else {
-                    withoutMocks++;
+                } else if (allCalls == allCallsSeen && stores > storesSeen) {
+                    fakes++;
                 }
             }
-            seen = now;
+            storesSeen = stores;
         }
     }
 
@@ -214,6 +249,43 @@ public final class LearnerTests {
             } catch (ReflectiveOperationException exception) {
                 throw new AssertionError("Could not stop listening to Mockito: " + exception, exception);
             }
+        }
+
+        /**
+         * Calls made on the mocks so far, only those made from inside {@code caller} when it is not null. Mockito does
+         * not record stubbing and verification calls as invocations.
+         */
+        int calls(String caller) {
+            int calls = 0;
+            try {
+                Class<?> mockito = Class.forName("org.mockito.Mockito");
+                Method details = mockito.getMethod("mockingDetails", Object.class);
+                Method invocations = Class.forName("org.mockito.MockingDetails").getMethod("getInvocations");
+                Method location = Class.forName("org.mockito.invocation.DescribedInvocation").getMethod("getLocation");
+                for (Object mock : mocks) {
+                    for (Object invocation : (Collection<?>) invocations.invoke(details.invoke(null, mock))) {
+                        if (caller == null || owns(caller, callerClass(location.invoke(invocation).toString()))) {
+                            calls++;
+                        }
+                    }
+                }
+            } catch (ReflectiveOperationException exception) {
+                throw new AssertionError("Could not read Mockito invocations: " + exception, exception);
+            }
+            return calls;
+        }
+
+        /** The class in a Mockito location such as {@code -> at com.example.Type.method(Type.java:12)}. */
+        private static String callerClass(String location) {
+            String frame = location.strip();
+            int at = frame.indexOf("at ");
+            int paren = frame.indexOf('(');
+            if (at < 0 || paren < at) {
+                return "";
+            }
+            String method = frame.substring(at + 3, paren);
+            int dot = method.lastIndexOf('.');
+            return dot < 0 ? "" : method.substring(0, dot);
         }
 
         int usedStubbings() {

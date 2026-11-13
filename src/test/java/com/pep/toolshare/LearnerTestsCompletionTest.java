@@ -15,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /** Week 4: your own JUnit tests for the service, with a fake, a Mockito mock and an exception assertion. */
 class LearnerTestsCompletionTest {
     private static final String CLASS_NAME = "com.pep.toolshare.learner.LendingServiceTest";
+    private static final String SERVICE = "com.pep.toolshare.lending.LendingService";
 
     @Test
     void pomDeclaresMockitoForTestsOnly() throws Exception {
@@ -36,20 +37,21 @@ class LearnerTestsCompletionTest {
 
     @Test
     void yourServiceTestsRunAndPass() {
-        LearnerTests.assertRunsAndPasses(CLASS_NAME, 4);
+        LearnerTests.assertRunsAndPasses(CLASS_NAME, 4, SERVICE);
     }
 
     @Test
     void yourTestsUseAnExceptionAssertionAFakeAndAMock() {
-        LearnerTests.Run run = LearnerTests.assertRunsAndPasses(CLASS_NAME, 4);
+        LearnerTests.Run run = LearnerTests.assertRunsAndPasses(CLASS_NAME, 4, SERVICE);
         assertTrue(run.mockitoPresent(), "add Mockito to pom.xml (TODO 4F) so your tests can use it");
         assertFalse(run.refusalsHandled().isEmpty(), "use assertThrows for at least one refused request: one of "
-                + "your tests must make LendingService throw a LendingException and expect it");
-        assertTrue(run.passingTestsWithoutMocks() > 0, "at least one test must use the in-memory repositories "
-                + "(SampleData.inMemory()) as a fake, with no Mockito mock");
+                + "your tests must make LendingService itself throw a LendingException (not throw one from the test "
+                + "or a mock) and expect it");
+        assertTrue(run.passingFakeTests() > 0, "at least one test must use the in-memory repositories "
+                + "(SampleData.inMemory()) as a fake and call no Mockito mock");
         assertTrue(run.passingTestsWithMocks() > 0 && run.usedStubbings() > 0 && run.verifications() > 0,
-                "use a Mockito mock in at least one test: mock(...), when(...).thenReturn(...) that your test "
-                        + "actually uses, and verify(...)");
+                "use a Mockito mock in at least one test: mock(...), when(...).thenReturn(...) that the code "
+                        + "under test actually uses, and verify(...)");
     }
 
     private static String child(Element parent, String name) {

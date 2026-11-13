@@ -85,8 +85,8 @@ mode cannot fetch a new dependency.
 
 Write at least four `@Test` methods in `learner/LendingServiceTest.java`, each arranged, acted and asserted:
 
-- one that uses `assertThrows` for a refused request;
-- one that uses the in-memory repositories (`SampleData.inMemory()`) as a fake;
+- one that uses `assertThrows` for a refused request that `LendingService` itself refuses;
+- one that uses the in-memory repositories (`SampleData.inMemory()`) as a fake and calls no mock;
 - one that uses a Mockito mock with `mock(...)`, `when(...).thenReturn(...)` and `verify(...)`.
 
 Then look at coverage: `mvn -q -Pcoverage verify` and open `target/site/jacoco/index.html`. In your work log, note

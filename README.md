@@ -63,7 +63,7 @@ commit in small steps, push the branch, merge it into `main`, push `main`, and f
 
 The course schedule gives the project 280 minutes of class time: 160 minutes of milestone sessions (20-30 minutes per
 milestone) and a 120-minute session on Day 29 to finish Milestone 6 and record your walkthrough. Completing the
-project takes longer than that: plan on roughly 22 to 40 hours over the six weeks, and expect your own pace to differ
+project takes longer than that: plan on roughly 1,350 to 2,355 minutes (about 22.5 to 39 hours) over the six weeks, and expect your own pace to differ
 from anyone else's. That is intended. The platform gives you additional time to complete and catch up on milestones,
 and your trainer may ask how long each milestone took; that feedback is used to check and adjust this plan.
 
@@ -109,7 +109,8 @@ instead of `psql` (no backslash commands such as `\dt`; use `SHOW TABLES;`), and
 
 For course platforms that create one repository per learner: import this repository's default branch `main` as a
 single snapshot. Nothing else is required: no extra branches, tags, history, secrets or services, and no network access
-at run time after the one-time `./scripts/prefetch.sh`. The checks work with any repository owner, URL or remote name.
+at run time once `./scripts/prefetch.sh` has downloaded the dependencies (run it again after adding one, as in
+Milestone 4). The checks work with any repository owner, URL or remote name.
 
 The included CI workflow (`.github/workflows/ci.yml`) works at every stage of the project: it runs the health build,
 prints the milestone progress report (unfinished milestones do not fail it), and runs a privacy scan of the
