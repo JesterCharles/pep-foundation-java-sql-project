@@ -50,6 +50,22 @@ class LoanServiceCompletionTest {
     }
 
     @Test
+    void loanInsertFailureAfterToolUpdateRollsBackTheToolUpdate() throws Exception {
+        TestDatabase.execute(connections,
+                "ALTER TABLE loans ADD CONSTRAINT test_rejects_loans_for_tool_five CHECK (tool_id <> 5)");
+
+        assertThrows(LoanException.class, () -> loans.checkout(
+                1L,
+                5L,
+                LocalDate.of(2030, 2, 1),
+                LocalDate.of(2030, 2, 8)
+        ));
+
+        assertEquals("AVAILABLE", TestDatabase.toolStatus(connections, 5L));
+        assertEquals(0L, TestDatabase.activeLoansForTool(connections, 5L));
+    }
+
+    @Test
     void unavailableToolIsRejectedWithoutCreatingAnotherLoan() throws Exception {
         assertThrows(LoanException.class, () -> loans.checkout(
                 1L,

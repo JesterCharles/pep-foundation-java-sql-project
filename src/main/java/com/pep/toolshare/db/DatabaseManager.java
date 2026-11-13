@@ -7,6 +7,8 @@ import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /** Creates and resets the deterministic local schema and synthetic fixtures. */
@@ -14,12 +16,31 @@ public final class DatabaseManager {
     private DatabaseManager() {
     }
 
+    private static final Set<Integer> TABLE_NOT_FOUND = Set.of(42102, 42103, 42104);
+    private static final List<String> REQUIRED_TABLES = List.of("members", "tools", "loans");
+
     public static void initializeIfNeeded(ConnectionFactory connections) {
+        if (!schemaIsComplete(connections)) {
+            reset(connections);
+        }
+    }
+
+    private static boolean schemaIsComplete(ConnectionFactory connections) {
         try (Connection connection = connections.open();
              Statement statement = connection.createStatement()) {
-            statement.executeQuery("SELECT 1 FROM members FETCH FIRST 1 ROW ONLY");
-        } catch (SQLException missingSchema) {
-            reset(connections);
+            for (String table : REQUIRED_TABLES) {
+                try {
+                    statement.executeQuery("SELECT 1 FROM " + table + " FETCH FIRST 1 ROW ONLY").close();
+                } catch (SQLException exception) {
+                    if (TABLE_NOT_FOUND.contains(exception.getErrorCode())) {
+                        return false;
+                    }
+                    throw exception;
+                }
+            }
+            return true;
+        } catch (SQLException exception) {
+            throw new RepositoryException("Could not inspect the local database schema", exception);
         }
     }
 

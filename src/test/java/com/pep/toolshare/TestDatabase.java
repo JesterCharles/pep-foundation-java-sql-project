@@ -24,6 +24,13 @@ final class TestDatabase {
         return connections;
     }
 
+    static void execute(ConnectionFactory connections, String sql) throws SQLException {
+        try (Connection connection = connections.open();
+             Statement statement = connection.createStatement()) {
+            statement.execute(sql);
+        }
+    }
+
     static long count(ConnectionFactory connections, String table) throws SQLException {
         try (Connection connection = connections.open();
              Statement statement = connection.createStatement();

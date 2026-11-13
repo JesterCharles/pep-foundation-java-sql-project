@@ -19,10 +19,10 @@ machine.
 From the repository root:
 
 ```bash
-mvn -q verify                         # starter health: expected to pass
-mvn -q exec:java -Dexec.args=reset   # recreate the local database and synthetic seed data
-mvn -q exec:java                     # run the report entry point
-mvn -q -Pcompletion test             # learner contract: expected to fail until TODOs are complete
+mvn -q verify                                # starter health: expected to pass
+mvn -q compile exec:java -Dexec.args=reset   # recreate the local database and synthetic seed data
+mvn -q compile exec:java                     # run the report entry point
+mvn -q -Pcompletion test                     # learner contract: expected to fail until TODOs are complete
 ```
 
 The passing health build and failing completion profile are intentional starter behavior, not a broken setup.
@@ -68,7 +68,7 @@ secrets in this repository.
 ```bash
 ./scripts/health.sh                    # clean compile + starter health tests
 ./scripts/reset.sh                     # delete/recreate local schema and seed rows
-mvn -q exec:java                       # print available tools and the category report
+mvn -q compile exec:java               # print available tools and the category report
 mvn -q -Pcompletion test               # run every public learner-completion test
 ./scripts/audit-public.sh              # scan tracked history for generated/private material
 ```
@@ -81,7 +81,7 @@ You are done when:
 
 1. `mvn -q -Pcompletion test` passes;
 2. `mvn -q verify` still passes;
-3. reset followed by `mvn -q exec:java` prints three available tools and three category rows; and
+3. reset followed by `mvn -q compile exec:java` prints three available tools and three category rows; and
 4. every `TODO LEARNER` marker in the five editable files has been replaced by your implementation.
 
 ## Database note
@@ -95,6 +95,7 @@ exact boundary.
 
 - **Enforcer rejects Java:** make JDK 25 the active `JAVA_HOME`, then rerun `java -version` and `mvn -v`.
 - **A database file is locked:** stop another running copy, then run `./scripts/reset.sh`.
+- **Report fails after a schema edit:** fix `schema.sql`, then run `./scripts/reset.sh` to rebuild the local database.
 - **Dependencies are unavailable offline:** run the first Maven command once with network access so Maven can fill its
   local cache.
 - **Starter completion tests fail:** expected. Read the named public test and the matching TODO; use
