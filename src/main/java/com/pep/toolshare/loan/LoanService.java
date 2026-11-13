@@ -14,7 +14,7 @@ public final class LoanService {
     }
 
     public long checkout(long memberId, long toolId, LocalDate borrowedOn, LocalDate dueOn) {
-        // TODO LEARNER 5: In one JDBC transaction, mark an available tool ON_LOAN and insert its loan.
+        // TODO LEARNER 6: In one JDBC transaction, mark an available tool ON_LOAN and insert its loan.
         // Commit only after both statements succeed; roll back and throw LoanException on every failure.
         throw new UnsupportedOperationException("TODO: implement checkout transaction");
     }

@@ -30,7 +30,7 @@ public final class JdbcToolRepository implements ToolRepository {
 
     @Override
     public List<CategorySummary> summarizeCategories(int minimumToolCount) {
-        // TODO LEARNER 4C: Build the grouped category report with a LEFT JOIN, CASE, HAVING, and ORDER BY.
+        // TODO LEARNER 5: Build the grouped category report with a LEFT JOIN, CASE, HAVING, and ORDER BY.
         return List.of();
     }
 }
