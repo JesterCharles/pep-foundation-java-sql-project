@@ -47,8 +47,8 @@ class LearnerTestsCompletionTest {
         assertFalse(run.refusalsHandled().isEmpty(), "use assertThrows for at least one refused request: one of "
                 + "your tests must make LendingService itself throw a LendingException (not throw one from the test "
                 + "or a mock) and expect it");
-        assertTrue(run.passingFakeTests() > 0, "at least one test must use the in-memory repositories "
-                + "(SampleData.inMemory()) as a fake and call no Mockito mock");
+        assertTrue(run.passingFakeTests() > 0, "at least one test must give LendingService the in-memory "
+                + "repositories from SampleData.inMemory() as a fake, call the service, and call no Mockito mock");
         assertTrue(run.passingTestsWithMocks() > 0 && run.usedStubbings() > 0 && run.verifications() > 0,
                 "use a Mockito mock in at least one test: mock(...), when(...).thenReturn(...) that the code "
                         + "under test actually uses, and verify(...)");

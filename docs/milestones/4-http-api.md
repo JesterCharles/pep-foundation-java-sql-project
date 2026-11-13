@@ -15,7 +15,7 @@ Data still lives in memory this week; Week 5 swaps in the database without chang
 | 4C | `lending/InMemoryToolRepository.java`, `lending/InMemoryLoanRepository.java` | Repositories on collections. |
 | 4D | `lending/LendingService.java` | The lending rules, logging, and exceptions below. |
 | 4E | `api/LanternApi.java` | Exception handlers and the routes below. |
-| 4F | `pom.xml` | Add `org.mockito:mockito-core` version `5.24.0` with `<scope>test</scope>`. |
+| 4F | `pom.xml` | Add `org.mockito:mockito-core` with `<scope>test</scope>`, at the version the TODO comment in `pom.xml` gives. |
 | 4G | `src/test/java/com/pep/toolshare/learner/LendingServiceTest.java` | Your own tests (see below). |
 | 4W | `WORKLOG.md` | Your `### M4` entry, including `Coverage:`. |
 
@@ -86,7 +86,7 @@ mode cannot fetch a new dependency.
 Write at least four `@Test` methods in `learner/LendingServiceTest.java`, each arranged, acted and asserted:
 
 - one that uses `assertThrows` for a refused request that `LendingService` itself refuses;
-- one that uses the in-memory repositories (`SampleData.inMemory()`) as a fake and calls no mock;
+- one that gives `LendingService` the in-memory repositories (`SampleData.inMemory()`) as a fake and calls no mock;
 - one that uses a Mockito mock with `mock(...)`, `when(...).thenReturn(...)` and `verify(...)`.
 
 Then look at coverage: `mvn -q -Pcoverage verify` and open `target/site/jacoco/index.html`. In your work log, note

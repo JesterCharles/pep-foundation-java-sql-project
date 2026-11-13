@@ -64,7 +64,7 @@
             <artifactId>junit-platform-launcher</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- TODO LEARNER 4F: declare the Mockito test dependency here (see docs/milestones/4-http-api.md). -->
+        <!-- TODO LEARNER 4F: declare the org.mockito:mockito-core test dependency here, version 5.24.0 (see docs/milestones/4-http-api.md). -->
     </dependencies>
 
     <build>

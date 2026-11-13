@@ -6,6 +6,7 @@
 # errors do, and the last lines of the log are shown.
 set -euo pipefail
 
+unset MAVEN_ARGS   # downloading needs Maven online, even if offline mode is set in this terminal
 root=$(cd "$(dirname "$0")/.." && pwd -P)
 cd "$root"
 log=$(mktemp "${TMPDIR:-/tmp}/prefetch.XXXXXX")

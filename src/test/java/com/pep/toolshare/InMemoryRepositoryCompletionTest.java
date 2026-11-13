@@ -9,6 +9,7 @@ import com.pep.toolshare.domain.ToolStatus;
 import com.pep.toolshare.lending.InMemoryLoanRepository;
 import com.pep.toolshare.lending.InMemoryMemberRepository;
 import com.pep.toolshare.lending.InMemoryToolRepository;
+import com.pep.toolshare.lending.MemberRepository;
 import com.pep.toolshare.lending.NotFoundException;
 import com.pep.toolshare.lending.RuleViolationException;
 import org.junit.jupiter.api.Test;
@@ -106,12 +107,12 @@ class InMemoryRepositoryCompletionTest {
 
     @Test
     void membersWithLoansCannotBeDeleted() {
-        InMemoryMemberRepository members = (InMemoryMemberRepository) SampleData.inMemory().members();
+        MemberRepository members = SampleData.inMemory().members();
         assertThrows(RuleViolationException.class, () -> members.delete("M-0001"));
         assertTrue(members.delete("M-0006"));
         assertFalse(members.delete("M-0006"));
         InMemoryToolRepository tools = new InMemoryToolRepository();
-        InMemoryLoanRepository loans = new InMemoryLoanRepository(tools, members);
+        InMemoryLoanRepository loans = new InMemoryLoanRepository(tools, new InMemoryMemberRepository());
         assertEquals(List.of(), loans.findAll());
     }
 }

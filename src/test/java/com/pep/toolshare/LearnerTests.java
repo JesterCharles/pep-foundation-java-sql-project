@@ -48,7 +48,7 @@ public final class LearnerTests {
     public record Run(String simpleName, long found, long succeeded, long failed, String failures,
                       boolean mockitoPresent, int mocksCreated, int usedStubbings, int verifications,
                       int passingTestsWithMocks, int passingFakeTests, int databasesCreated,
-                      int databaseReads, List<String> refusalsHandled) {
+                      int databaseReads, int passingReadBackTests, List<String> refusalsHandled) {
     }
 
     /**
@@ -101,7 +101,7 @@ public final class LearnerTests {
                 summary.getTotalFailureCount(), failures.toString(), mockito != null,
                 mockito == null ? 0 : mockito.mocks.size(), mockito == null ? 0 : mockito.usedStubbings(),
                 mockito == null ? 0 : mockito.verifications, perTest.withMocks, perTest.fakes,
-                TestDatabase.created() - createdBefore, TestDatabase.reads() - readsBefore,
+                TestDatabase.created() - createdBefore, TestDatabase.reads() - readsBefore, perTest.readBacks,
                 refusalsHandled(exceptions, className, thrower));
     }
 
@@ -167,9 +167,10 @@ public final class LearnerTests {
     }
 
     /**
-     * Per passing test: did the code under test call a Mockito mock, and did the test build the in-memory sample data
-     * without any mock being called (a fake)? Mocks created but never called, for example in a field, do not count,
-     * and neither do calls your test makes on a mock directly.
+     * Per passing test: did the code under test call a Mockito mock; did LendingService run on the in-memory sample
+     * data while no mock was called (a fake); and did JdbcLoanRepository use a test database that the test then read
+     * back? Mocks created but never called, for example in a field, do not count, and neither do calls your test makes
+     * on a mock directly.
      */
     private static final class PerTest implements TestExecutionListener {
         private final MockitoProbe mockito;
@@ -177,8 +178,12 @@ public final class LearnerTests {
         private int callsSeen;
         private int allCallsSeen;
         private int storesSeen = SampleData.inMemoryCreated();
+        private int serviceCallsSeen = SampleData.serviceCalls();
+        private int repositoryOpensSeen = TestDatabase.repositoryOpens();
+        private int readsSeen = TestDatabase.reads();
         private int withMocks;
         private int fakes;
+        private int readBacks;
 
         PerTest(MockitoProbe mockito, String thrower) {
             this.mockito = mockito;
@@ -201,14 +206,23 @@ public final class LearnerTests {
             int calls = mockito == null ? 0 : mockito.calls(thrower);
             int allCalls = mockito == null ? 0 : mockito.calls(null);
             int stores = SampleData.inMemoryCreated();
+            int serviceCalls = SampleData.serviceCalls();
+            int repositoryOpens = TestDatabase.repositoryOpens();
+            int reads = TestDatabase.reads();
             if (result.getStatus() == TestExecutionResult.Status.SUCCESSFUL) {
                 if (calls > callsSeen) {
                     withMocks++;
-                } else if (allCalls == allCallsSeen && stores > storesSeen) {
+                } else if (allCalls == allCallsSeen && stores > storesSeen && serviceCalls > serviceCallsSeen) {
                     fakes++;
+                }
+                if (repositoryOpens > repositoryOpensSeen && reads > readsSeen) {
+                    readBacks++;
                 }
             }
             storesSeen = stores;
+            serviceCallsSeen = serviceCalls;
+            repositoryOpensSeen = repositoryOpens;
+            readsSeen = reads;
         }
     }
 

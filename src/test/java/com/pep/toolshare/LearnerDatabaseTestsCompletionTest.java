@@ -20,8 +20,9 @@ class LearnerDatabaseTestsCompletionTest {
         LearnerTests.Run run = LearnerTests.assertRunsAndPasses(CLASS_NAME, 3, REPOSITORY);
         assertTrue(run.databasesCreated() >= run.found(), "start every test from its own fresh database with "
                 + "TestDatabase.create(); " + run.found() + " tests created " + run.databasesCreated());
-        assertTrue(run.databaseReads() > 0,
-                "read the tables back with TestDatabase.count or TestDatabase.text to prove what was saved");
+        assertTrue(run.passingReadBackTests() > 0, "in at least one test, call JdbcLoanRepository on the database "
+                + "from TestDatabase.create(), then read the tables back with TestDatabase.count or TestDatabase.text "
+                + "to prove what it saved");
         assertFalse(run.refusalsHandled().isEmpty(), "check that a refused checkout or checkin throws: one of your "
                 + "tests must make JdbcLoanRepository itself throw a LendingException and expect it (assertThrows)");
     }

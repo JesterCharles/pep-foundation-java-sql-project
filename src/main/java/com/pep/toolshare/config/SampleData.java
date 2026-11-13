@@ -23,13 +23,17 @@ public final class SampleData {
     private SampleData() {
     }
 
-    /** How many times {@link #inMemory()} has run in this program; the completion checks read it. */
+    /** How many times {@link #inMemory()} has finished building the stores; the completion checks read it. */
     public static int inMemoryCreated() {
         return IN_MEMORY_CREATED.get();
     }
 
+    /** How many calls LendingService has made on stores from {@link #inMemory()}; the completion checks read it. */
+    public static int serviceCalls() {
+        return ServiceCalls.count();
+    }
+
     public static Stores inMemory() {
-        IN_MEMORY_CREATED.incrementAndGet();
         InMemoryMemberRepository members = new InMemoryMemberRepository();
         InMemoryToolRepository tools = new InMemoryToolRepository();
         InMemoryLoanRepository loans = new InMemoryLoanRepository(tools, members);
@@ -73,7 +77,9 @@ public final class SampleData {
         loan(loans, 13, "M-0003", "LT-1010-2", "2026-09-12", "2026-09-19", "2026-09-21", 150);
         loan(loans, 14, "M-0002", "LT-1012-4", "2026-09-15", "2026-09-29", "2026-09-29", 0);
 
-        return new Stores(members, tools, loans, null);
+        Stores stores = ServiceCalls.wrap(new Stores(members, tools, loans, null));
+        IN_MEMORY_CREATED.incrementAndGet();
+        return stores;
     }
 
     private static void tool(InMemoryToolRepository tools, String code, String name, ToolCategory category,

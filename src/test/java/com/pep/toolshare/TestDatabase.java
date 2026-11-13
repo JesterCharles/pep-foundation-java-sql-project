@@ -14,6 +14,8 @@ public final class TestDatabase {
     private static final AtomicInteger NEXT_ID = new AtomicInteger();
     private static final AtomicInteger CREATED = new AtomicInteger();
     private static final AtomicInteger READS = new AtomicInteger();
+    private static final AtomicInteger REPOSITORY_OPENS = new AtomicInteger();
+    private static final String LOAN_REPOSITORY = "com.pep.toolshare.jdbc.JdbcLoanRepository";
 
     private TestDatabase() {
     }
@@ -23,12 +25,27 @@ public final class TestDatabase {
                 + ";MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1";
     }
 
-    /** Creates the database and runs schema.sql and seed.sql. */
+    /**
+     * Creates the database and runs schema.sql and seed.sql. The returned factory also notes each connection that
+     * JdbcLoanRepository opens, so the checks can see your tests exercised it.
+     */
     public static ConnectionFactory create() {
         ConnectionFactory connections = ConnectionFactory.forUrl(newUrl());
         DatabaseManager.reset(connections);
         CREATED.incrementAndGet();
-        return connections;
+        return () -> {
+            if (StackWalker.getInstance().walk(frames -> frames.anyMatch(frame ->
+                    frame.getClassName().equals(LOAN_REPOSITORY)
+                            || frame.getClassName().startsWith(LOAN_REPOSITORY + "$")))) {
+                REPOSITORY_OPENS.incrementAndGet();
+            }
+            return connections.open();
+        };
+    }
+
+    /** How many connections JdbcLoanRepository has opened on databases from {@link #create()} in this test run. */
+    public static int repositoryOpens() {
+        return REPOSITORY_OPENS.get();
     }
 
     /** How many databases {@link #create()} has made in this test run. */

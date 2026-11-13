@@ -33,8 +33,8 @@ mvn -q verify                               # starter health: passes
 `mvn -q verify` passing while every milestone fails is the expected starting point, not a broken setup.
 
 `./scripts/prefetch.sh` runs every Maven command of this project once, so Maven downloads all the libraries and build
-plugins they use from Maven Central. After that, every command in this README also works without a network
-connection: first run `export MAVEN_ARGS=-o` (Maven offline mode) in that terminal. Run `./scripts/prefetch.sh` again,
+plugins they use from Maven Central. After that, every Maven command and project script in this README also works
+without a network connection (pushing to the course server still needs one): first run `export MAVEN_ARGS=-o` (Maven offline mode) in that terminal. Run `./scripts/prefetch.sh` again,
 online, whenever you add a dependency to `pom.xml` (Milestone 4 adds Mockito).
 
 ## Milestones
