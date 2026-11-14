@@ -194,8 +194,7 @@ public final class LearnerTests {
     private static final class PerTest implements TestExecutionListener {
         private final MockitoProbe mockito;
         private final String thrower;
-        private int callsSeen;
-        private int allCallsSeen;
+        private final Set<Object> invocationsSeen = Collections.newSetFromMap(new IdentityHashMap<>());
         private int serviceCallsSeen;
         private int repositoryOpensSeen = TestDatabase.repositoryOpens();
         private int readsSeen = TestDatabase.reads();
@@ -212,8 +211,9 @@ public final class LearnerTests {
         @Override
         public void executionStarted(TestIdentifier test) {
             if (test.isTest()) {
-                callsSeen = mockito == null ? 0 : mockito.calls(thrower);
-                allCallsSeen = mockito == null ? 0 : mockito.calls(null);
+                if (mockito != null) {
+                    invocationsSeen.addAll(mockito.invocations());
+                }
                 serviceCallsSeen = SampleData.callsFrom(thrower);
                 repositoryOpensSeen = TestDatabase.repositoryOpens();
                 readsSeen = TestDatabase.reads();
@@ -228,15 +228,27 @@ public final class LearnerTests {
             if (mockito != null) {
                 mockito.sampleUsedStubbings();
             }
-            int calls = mockito == null ? 0 : mockito.calls(thrower);
-            int allCalls = mockito == null ? 0 : mockito.calls(null);
+            // This test's mock calls are the invocations that were not there when it started. Counting objects rather
+            // than totals keeps a reset(...) in @BeforeEach, which clears earlier invocations, from hiding them.
+            int calls = 0;
+            int allCalls = 0;
+            if (mockito != null) {
+                for (Object invocation : mockito.invocations()) {
+                    if (invocationsSeen.add(invocation)) {
+                        allCalls++;
+                        if (mockito.madeBy(invocation, thrower)) {
+                            calls++;
+                        }
+                    }
+                }
+            }
             int serviceCalls = SampleData.callsFrom(thrower);
             int repositoryOpens = TestDatabase.repositoryOpens();
             int reads = TestDatabase.reads();
             if (result.getStatus() == TestExecutionResult.Status.SUCCESSFUL) {
-                if (calls > callsSeen) {
+                if (calls > 0) {
                     withMocks++;
-                } else if (allCalls == allCallsSeen && serviceCalls > serviceCallsSeen) {
+                } else if (allCalls == 0 && serviceCalls > serviceCallsSeen) {
                     fakes++;
                 }
                 if (repositoryOpens > repositoryOpensSeen && reads > readsSeen) {
@@ -289,31 +301,34 @@ public final class LearnerTests {
             }
         }
 
-        /**
-         * Calls made on the mocks so far; when {@code caller} is not null, only those whose calling frame, as Mockito
-         * records it, is inside {@code caller}. A call passed through Java's own code (for example a method reference
-         * given to {@code Optional.map}) is not credited, because that frame cannot show who wrote it. Mockito does not
-         * record stubbing and verification calls as invocations.
-         */
-        int calls(String caller) {
-            int calls = 0;
+        /** Every invocation Mockito currently holds on the mocks seen so far (stubbing and verify calls excluded). */
+        List<Object> invocations() {
+            List<Object> all = new ArrayList<>();
             try {
                 Class<?> mockito = Class.forName("org.mockito.Mockito");
                 Method details = mockito.getMethod("mockingDetails", Object.class);
                 Method invocations = Class.forName("org.mockito.MockingDetails").getMethod("getInvocations");
-                Method location = Class.forName("org.mockito.invocation.DescribedInvocation").getMethod("getLocation");
                 for (Object mock : mocks) {
-                    for (Object invocation : (Collection<?>) invocations.invoke(details.invoke(null, mock))) {
-                        String from = callerClass(location.invoke(invocation).toString());
-                        if (caller == null || owns(caller, from)) {
-                            calls++;
-                        }
-                    }
+                    all.addAll((Collection<?>) invocations.invoke(details.invoke(null, mock)));
                 }
             } catch (ReflectiveOperationException exception) {
                 throw new AssertionError("Could not read Mockito invocations: " + exception, exception);
             }
-            return calls;
+            return all;
+        }
+
+        /**
+         * Whether Mockito records {@code caller} as the class that made {@code invocation}. A call passed through
+         * Java's own code (for example a method reference given to {@code Optional.map}) is not credited, because that
+         * frame cannot show who wrote it.
+         */
+        boolean madeBy(Object invocation, String caller) {
+            try {
+                Method location = Class.forName("org.mockito.invocation.DescribedInvocation").getMethod("getLocation");
+                return owns(caller, callerClass(location.invoke(invocation).toString()));
+            } catch (ReflectiveOperationException exception) {
+                throw new AssertionError("Could not read a Mockito invocation: " + exception, exception);
+            }
         }
 
         /** The class in a Mockito location such as {@code -> at com.example.Type.method(Type.java:12)}. */

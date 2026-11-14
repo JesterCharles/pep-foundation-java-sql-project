@@ -63,7 +63,7 @@ class LearnerTestEvidenceTest {
     static class SelfThrownRefusal {
         @Test
         void throwsItsOwnRefusal() {
-            assertThrows(RuntimeException.class, () -> {
+            assertThrows(Throwable.class, () -> {
                 throw new RuleViolationException("made by the test");
             });
         }
