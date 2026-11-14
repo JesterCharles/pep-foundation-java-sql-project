@@ -18,8 +18,10 @@
         <slf4j.version>2.0.17</slf4j.version>
         <h2.version>2.3.232</h2.version>
         <completion.test.exclude>**/*CompletionTest.java</completion.test.exclude>
-        <!-- Your own tests (learner/) are compiled and run by the completion checks and the coverage report, not by the
-             health build, so unfinished tests of your own never make the health build fail. -->
+        <!-- Your own tests (learner/) are not part of the health build, so unfinished tests of your own never make it
+             fail. The completion checks compile them and run them through their own checker; the coverage report
+             compiles and runs them directly. -->
+        <learner.compile.exclude>**/learner/**</learner.compile.exclude>
         <learner.test.exclude>**/learner/**</learner.test.exclude>
         <jacocoArgLine></jacocoArgLine>
     </properties>
@@ -129,7 +131,7 @@
                         <arg>-Xlint:all,-processing</arg>
                     </compilerArgs>
                     <testExcludes>
-                        <testExclude>${learner.test.exclude}</testExclude>
+                        <testExclude>${learner.compile.exclude}</testExclude>
                     </testExcludes>
                 </configuration>
             </plugin>
@@ -171,13 +173,14 @@
             <id>completion</id>
             <properties>
                 <completion.test.exclude>**/NoCompletionTestsExcluded.java</completion.test.exclude>
-                <learner.test.exclude>**/NoLearnerTestsExcluded.java</learner.test.exclude>
+                <learner.compile.exclude>**/NoLearnerTestsExcluded.java</learner.compile.exclude>
             </properties>
         </profile>
         <profile>
             <!-- Week 4 coverage report: mvn -q -Pcoverage verify, then open target/site/jacoco/index.html -->
             <id>coverage</id>
             <properties>
+                <learner.compile.exclude>**/NoLearnerTestsExcluded.java</learner.compile.exclude>
                 <learner.test.exclude>**/NoLearnerTestsExcluded.java</learner.test.exclude>
             </properties>
             <build>

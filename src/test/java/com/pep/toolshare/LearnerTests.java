@@ -25,8 +25,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
@@ -222,6 +225,9 @@ public final class LearnerTests {
             if (!test.isTest()) {
                 return;
             }
+            if (mockito != null) {
+                mockito.sampleUsedStubbings();
+            }
             int calls = mockito == null ? 0 : mockito.calls(thrower);
             int allCalls = mockito == null ? 0 : mockito.calls(null);
             int serviceCalls = SampleData.callsFrom(thrower);
@@ -249,6 +255,7 @@ public final class LearnerTests {
      */
     private static final class MockitoProbe implements InvocationHandler {
         private final List<Object> mocks = new ArrayList<>();
+        private final Set<Object> used = Collections.newSetFromMap(new IdentityHashMap<>());
         private int verifications;
         private Object framework;
         private Object listener;
@@ -322,8 +329,14 @@ public final class LearnerTests {
             return dot < 0 ? "" : method.substring(0, dot);
         }
 
+        /** Stubbings seen used after any test so far; a later reset(...) cannot take that credit back. */
         int usedStubbings() {
-            int used = 0;
+            sampleUsedStubbings();
+            return used.size();
+        }
+
+        /** Notes every stubbing that has been used by now. Called after each test, before a reset can clear it. */
+        void sampleUsedStubbings() {
             try {
                 Class<?> mockito = Class.forName("org.mockito.Mockito");
                 Method details = mockito.getMethod("mockingDetails", Object.class);
@@ -332,7 +345,7 @@ public final class LearnerTests {
                 for (Object mock : mocks) {
                     for (Object stubbing : (Collection<?>) stubbings.invoke(details.invoke(null, mock))) {
                         if ((Boolean) wasUsed.invoke(stubbing)) {
-                            used++;
+                            used.add(stubbing);
                         }
                     }
                 }
@@ -341,7 +354,6 @@ public final class LearnerTests {
             } catch (InvocationTargetException exception) {
                 throw new AssertionError("Could not read Mockito stubbings: " + exception.getCause(), exception);
             }
-            return used;
         }
 
         @Override

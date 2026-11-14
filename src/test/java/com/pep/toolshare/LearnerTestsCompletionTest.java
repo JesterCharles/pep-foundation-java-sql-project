@@ -48,9 +48,8 @@ class LearnerTestsCompletionTest {
     void yourTestsUseAnExceptionAssertionAFakeAndAMock() {
         LearnerTests.Run run = LearnerTests.assertRunsAndPasses(CLASS_NAME, 4, SERVICE);
         assertTrue(run.mockitoPresent(), "add Mockito to pom.xml (TODO 4F) so your tests can use it");
-        assertFalse(run.refusalsHandled().isEmpty(), "use assertThrows for at least one refused request: one of "
-                + "your tests must make LendingService itself throw a LendingException (not throw one from the test "
-                + "or a mock) and expect it");
+        assertFalse(run.refusalsHandled().isEmpty(), "while your tests run, LendingService itself must throw a "
+                + "LendingException (one thrown by the test or a mock does not count); expect it with assertThrows");
         assertTrue(run.passingFakeTests() > 0, "at least one test must give LendingService the in-memory "
                 + "repositories from SampleData.inMemory() as a fake and call the service, with no Mockito mock called");
         assertTrue(run.passingTestsWithMocks() > 0, "in at least one test, give LendingService a mock(...) "
