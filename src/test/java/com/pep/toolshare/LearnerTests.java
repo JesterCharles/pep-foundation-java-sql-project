@@ -26,6 +26,8 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
 import static org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder.request;
@@ -40,6 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public final class LearnerTests {
     private static final String LENDING_EXCEPTION = "com.pep.toolshare.lending.LendingException";
+    private static final Map<String, Run> RUNS = new ConcurrentHashMap<>();
 
     private LearnerTests() {
     }
@@ -65,11 +68,24 @@ public final class LearnerTests {
         return run;
     }
 
-    /** Runs {@code className} through the JUnit Platform and records the evidence described above. */
-    public static Run run(String className, String thrower) {
+    /**
+     * Runs {@code className} through the JUnit Platform once per check run and records the evidence described above;
+     * later calls reuse that result, so state your tests keep in static fields is not carried into a second run.
+     */
+    public static synchronized Run run(String className, String thrower) {
+        String key = className + " " + thrower;
+        Run done = RUNS.get(key);
+        if (done == null) {
+            done = runOnce(className, thrower);
+            RUNS.put(key, done);
+        }
+        return done;
+    }
+
+    private static Run runOnce(String className, String thrower) {
         Class<?> type;
         try {
-            type = Class.forName(className);
+            type = Class.forName(className, false, LearnerTests.class.getClassLoader());
         } catch (ClassNotFoundException exception) {
             throw new AssertionError("Missing test class " + className, exception);
         }
@@ -195,6 +211,9 @@ public final class LearnerTests {
             if (test.isTest()) {
                 callsSeen = mockito == null ? 0 : mockito.calls(thrower);
                 allCallsSeen = mockito == null ? 0 : mockito.calls(null);
+                serviceCallsSeen = SampleData.callsFrom(thrower);
+                repositoryOpensSeen = TestDatabase.repositoryOpens();
+                readsSeen = TestDatabase.reads();
             }
         }
 
@@ -264,8 +283,9 @@ public final class LearnerTests {
         }
 
         /**
-         * Calls made on the mocks so far; when {@code caller} is not null, only those made from inside it or passed
-         * through Java's own code, as a method reference such as {@code .map(tools::findByCode)} is. Mockito does not
+         * Calls made on the mocks so far; when {@code caller} is not null, only those whose calling frame, as Mockito
+         * records it, is inside {@code caller}. A call passed through Java's own code (for example a method reference
+         * given to {@code Optional.map}) is not credited, because that frame cannot show who wrote it. Mockito does not
          * record stubbing and verification calls as invocations.
          */
         int calls(String caller) {
@@ -278,7 +298,7 @@ public final class LearnerTests {
                 for (Object mock : mocks) {
                     for (Object invocation : (Collection<?>) invocations.invoke(details.invoke(null, mock))) {
                         String from = callerClass(location.invoke(invocation).toString());
-                        if (caller == null || owns(caller, from) || from.startsWith("java.")) {
+                        if (caller == null || owns(caller, from)) {
                             calls++;
                         }
                     }

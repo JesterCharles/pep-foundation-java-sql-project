@@ -1,11 +1,15 @@
 package com.pep.toolshare;
 
+import com.pep.toolshare.config.SampleData;
+import com.pep.toolshare.config.Stores;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
 import javax.xml.parsers.DocumentBuilderFactory;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -54,6 +58,63 @@ class LearnerTestsCompletionTest {
         assertTrue(run.usedStubbings() > 0, "stub a mock with when(...).thenReturn(...) and make sure the stubbed "
                 + "call happens");
         assertTrue(run.verifications() > 0, "check a call on a mock with verify(...)");
+    }
+
+    @Test
+    void theEvidenceCountsMethodReferencesAndSharedSampleData() {
+        String caller = MethodReferenceCaller.class.getName();
+        assertEquals(1, LearnerTests.run(caller, caller).passingFakeTests(),
+                "a repository call made through a method reference must count (checks the checker; needs 4C)");
+        String shared = SharedSampleData.class.getName();
+        assertEquals(2, LearnerTests.run(shared, shared).passingFakeTests(),
+                "each test that uses sample data shared by its class must count (checks the checker; needs 4C)");
+    }
+
+    @Test
+    void theEvidenceDoesNotCreditOneTimeSetupToATest() {
+        String setup = SetupOnly.class.getName();
+        assertEquals(0, LearnerTests.run(setup, setup).passingFakeTests(),
+                "work done once in @BeforeAll must not count for a test (checks the checker; needs 4C)");
+    }
+
+    /** Sample test classes for the checks above; they stand in for the class under test themselves. */
+    static class MethodReferenceCaller {
+        @Test
+        void looksUpThroughAMethodReference() {
+            Stores stores = SampleData.inMemory();
+            assertTrue(Optional.of("LT-1001-2").map(stores.tools()::findByCode).isPresent());
+        }
+    }
+
+    static class SharedSampleData {
+        private static Stores stores;
+
+        @BeforeAll
+        static void buildOnce() {
+            stores = SampleData.inMemory();
+        }
+
+        @Test
+        void readsTools() {
+            assertEquals(12, stores.tools().findAll().size());
+        }
+
+        @Test
+        void readsMembers() {
+            assertEquals(6, stores.members().findAll().size());
+        }
+    }
+
+    static class SetupOnly {
+        @BeforeAll
+        static void useTheStoresOnce() {
+            SampleData.inMemory().tools().findAll();
+        }
+
+        @Test
+        void doesNothing() {
+            assertTrue(true);
+        }
     }
 
     private static String child(Element parent, String name) {

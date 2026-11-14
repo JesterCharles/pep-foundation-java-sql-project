@@ -34,8 +34,9 @@ mvn -q verify                               # starter health: passes
 
 `./scripts/prefetch.sh` runs every Maven command of this project once, so Maven downloads all the libraries and build
 plugins they use from Maven Central. After that, every Maven command and project script in this README also works
-without a network connection (pushing to the course server still needs one): first run `export MAVEN_ARGS=-o` (Maven offline mode) in that terminal. Run `./scripts/prefetch.sh` again,
-online, whenever you add a dependency to `pom.xml` (Milestone 4 adds Mockito).
+without a network connection (pushing to the course server still needs one): first run `export MAVEN_ARGS=-o` (Maven
+offline mode) in that terminal. Run `./scripts/prefetch.sh` again, online, whenever you add a dependency to `pom.xml`
+(Milestone 4 adds Mockito).
 
 ## Milestones
 
@@ -62,10 +63,11 @@ commit in small steps, push the branch, merge it into `main`, push `main`, and f
 ## Time and pace
 
 The course schedule gives the project 280 minutes of class time: 160 minutes of milestone sessions (20-30 minutes per
-milestone) and a 120-minute session on Day 29 to finish Milestone 6 and record your walkthrough. Completing the
-project takes longer than that: plan on roughly 1,350 to 2,355 minutes (about 22.5 to 39 hours) over the six weeks, and expect your own pace to differ
-from anyone else's. That is intended. The platform gives you additional time to complete and catch up on milestones,
-and your trainer may ask how long each milestone took; that feedback is used to check and adjust this plan.
+milestone) and a 120-minute session on Day 29 to finish Milestone 6 and record your walkthrough. Completing the project
+takes longer than that: plan on roughly 1,350 to 2,355 minutes (about 22.5 to 39 hours) over the six weeks, and expect
+your own pace to differ from anyone else's. That is intended. The platform gives you additional time to complete and
+catch up on milestones, and your trainer may ask how long each milestone took; that feedback is used to check and adjust
+this plan.
 
 Because the project builds on itself every week, steady and complete work shows. Milestone 6 with your walkthrough is
 part of the Week 6 Checkpoint score, which is used for Fast Track selection.
@@ -82,7 +84,7 @@ there are no hidden tests. Keep method signatures and package names unchanged.
 ## Commands
 
 ```bash
-mvn -q verify                                       # compile everything and run the health tests
+mvn -q verify                                       # build and run the health tests (not your own tests)
 mvn -q -Pcompletion test                            # run every milestone check
 mvn -q -Pcompletion test -Dtest=LendingMathCompletionTest   # run one check class
 ./scripts/verify-milestones.sh N                    # check milestones 1 through N

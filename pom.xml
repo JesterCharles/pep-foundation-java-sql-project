@@ -18,7 +18,8 @@
         <slf4j.version>2.0.17</slf4j.version>
         <h2.version>2.3.232</h2.version>
         <completion.test.exclude>**/*CompletionTest.java</completion.test.exclude>
-        <!-- Your own tests (learner/) are run by the completion checks and the coverage report, not the health build. -->
+        <!-- Your own tests (learner/) are compiled and run by the completion checks and the coverage report, not by the
+             health build, so unfinished tests of your own never make the health build fail. -->
         <learner.test.exclude>**/learner/**</learner.test.exclude>
         <jacocoArgLine></jacocoArgLine>
     </properties>
@@ -127,6 +128,9 @@
                     <compilerArgs>
                         <arg>-Xlint:all,-processing</arg>
                     </compilerArgs>
+                    <testExcludes>
+                        <testExclude>${learner.test.exclude}</testExclude>
+                    </testExcludes>
                 </configuration>
             </plugin>
             <plugin>
