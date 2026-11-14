@@ -23,8 +23,9 @@ check, what an AI assistant produced, and how you verified it.
 ## Prerequisites
 
 A computer that runs Git 2.38 or newer and `bash` from Day 1; JDK 25 and Maven 3.9 or newer from Thursday of Week 1,
-when the course installs them; and `curl` from Week 4. Network access is needed once, for `./scripts/prefetch.sh`;
-after that the project runs offline with `MAVEN_ARGS=-o`. The Milestone 1 work needs only the shell and Git; its check
+when the course installs them; and `curl` from Week 4. Maven needs network access for `./scripts/prefetch.sh`, once at
+the start and again after you add a dependency (Milestone 4 adds Mockito); in between, the Maven commands and project
+scripts run offline with `MAVEN_ARGS=-o`. Pushing to the course server always needs a network connection. The Milestone 1 work needs only the shell and Git; its check
 runs once Java and Maven are installed, before Friday. Each milestone assumes the lessons taught up to it; nothing
 beyond the course is required.
 

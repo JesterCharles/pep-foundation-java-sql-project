@@ -48,10 +48,12 @@ class LearnerTestsCompletionTest {
                 + "your tests must make LendingService itself throw a LendingException (not throw one from the test "
                 + "or a mock) and expect it");
         assertTrue(run.passingFakeTests() > 0, "at least one test must give LendingService the in-memory "
-                + "repositories from SampleData.inMemory() as a fake, call the service, and call no Mockito mock");
-        assertTrue(run.passingTestsWithMocks() > 0 && run.usedStubbings() > 0 && run.verifications() > 0,
-                "use a Mockito mock in at least one test: mock(...), when(...).thenReturn(...) that the code "
-                        + "under test actually uses, and verify(...)");
+                + "repositories from SampleData.inMemory() as a fake and call the service, with no Mockito mock called");
+        assertTrue(run.passingTestsWithMocks() > 0, "in at least one test, give LendingService a mock(...) "
+                + "and make the service call it");
+        assertTrue(run.usedStubbings() > 0, "stub a mock with when(...).thenReturn(...) and make sure the stubbed "
+                + "call happens");
+        assertTrue(run.verifications() > 0, "check a call on a mock with verify(...)");
     }
 
     private static String child(Element parent, String name) {

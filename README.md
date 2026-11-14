@@ -82,7 +82,7 @@ there are no hidden tests. Keep method signatures and package names unchanged.
 ## Commands
 
 ```bash
-mvn -q verify                                       # compile and run the health tests (and your own tests)
+mvn -q verify                                       # compile everything and run the health tests
 mvn -q -Pcompletion test                            # run every milestone check
 mvn -q -Pcompletion test -Dtest=LendingMathCompletionTest   # run one check class
 ./scripts/verify-milestones.sh N                    # check milestones 1 through N

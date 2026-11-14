@@ -28,9 +28,12 @@ public final class SampleData {
         return IN_MEMORY_CREATED.get();
     }
 
-    /** How many calls LendingService has made on stores from {@link #inMemory()}; the completion checks read it. */
-    public static int serviceCalls() {
-        return ServiceCalls.count();
+    /**
+     * How many calls code in {@code className} (with its nested classes, lambdas and method references) has made on
+     * stores from {@link #inMemory()}; the completion checks read it.
+     */
+    public static int callsFrom(String className) {
+        return ServiceCalls.callsFrom(className);
     }
 
     public static Stores inMemory() {

@@ -177,8 +177,7 @@ public final class LearnerTests {
         private final String thrower;
         private int callsSeen;
         private int allCallsSeen;
-        private int storesSeen = SampleData.inMemoryCreated();
-        private int serviceCallsSeen = SampleData.serviceCalls();
+        private int serviceCallsSeen;
         private int repositoryOpensSeen = TestDatabase.repositoryOpens();
         private int readsSeen = TestDatabase.reads();
         private int withMocks;
@@ -188,6 +187,7 @@ public final class LearnerTests {
         PerTest(MockitoProbe mockito, String thrower) {
             this.mockito = mockito;
             this.thrower = thrower;
+            this.serviceCallsSeen = SampleData.callsFrom(thrower);
         }
 
         @Override
@@ -205,21 +205,19 @@ public final class LearnerTests {
             }
             int calls = mockito == null ? 0 : mockito.calls(thrower);
             int allCalls = mockito == null ? 0 : mockito.calls(null);
-            int stores = SampleData.inMemoryCreated();
-            int serviceCalls = SampleData.serviceCalls();
+            int serviceCalls = SampleData.callsFrom(thrower);
             int repositoryOpens = TestDatabase.repositoryOpens();
             int reads = TestDatabase.reads();
             if (result.getStatus() == TestExecutionResult.Status.SUCCESSFUL) {
                 if (calls > callsSeen) {
                     withMocks++;
-                } else if (allCalls == allCallsSeen && stores > storesSeen && serviceCalls > serviceCallsSeen) {
+                } else if (allCalls == allCallsSeen && serviceCalls > serviceCallsSeen) {
                     fakes++;
                 }
                 if (repositoryOpens > repositoryOpensSeen && reads > readsSeen) {
                     readBacks++;
                 }
             }
-            storesSeen = stores;
             serviceCallsSeen = serviceCalls;
             repositoryOpensSeen = repositoryOpens;
             readsSeen = reads;
@@ -266,8 +264,9 @@ public final class LearnerTests {
         }
 
         /**
-         * Calls made on the mocks so far, only those made from inside {@code caller} when it is not null. Mockito does
-         * not record stubbing and verification calls as invocations.
+         * Calls made on the mocks so far; when {@code caller} is not null, only those made from inside it or passed
+         * through Java's own code, as a method reference such as {@code .map(tools::findByCode)} is. Mockito does not
+         * record stubbing and verification calls as invocations.
          */
         int calls(String caller) {
             int calls = 0;
@@ -278,7 +277,8 @@ public final class LearnerTests {
                 Method location = Class.forName("org.mockito.invocation.DescribedInvocation").getMethod("getLocation");
                 for (Object mock : mocks) {
                     for (Object invocation : (Collection<?>) invocations.invoke(details.invoke(null, mock))) {
-                        if (caller == null || owns(caller, callerClass(location.invoke(invocation).toString()))) {
+                        String from = callerClass(location.invoke(invocation).toString());
+                        if (caller == null || owns(caller, from) || from.startsWith("java.")) {
                             calls++;
                         }
                     }

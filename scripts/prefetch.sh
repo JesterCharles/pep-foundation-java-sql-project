@@ -6,7 +6,17 @@
 # errors do, and the last lines of the log are shown.
 set -euo pipefail
 
-unset MAVEN_ARGS   # downloading needs Maven online, even if offline mode is set in this terminal
+# Downloading needs Maven online: drop only the offline switch from MAVEN_ARGS and keep your other settings.
+if [[ -n ${MAVEN_ARGS-} ]]; then
+    online_args=()
+    for arg in $MAVEN_ARGS; do
+        case $arg in
+            -o | --offline) ;;
+            *) online_args+=("$arg") ;;
+        esac
+    done
+    export MAVEN_ARGS="${online_args[*]-}"
+fi
 root=$(cd "$(dirname "$0")/.." && pwd -P)
 cd "$root"
 log=$(mktemp "${TMPDIR:-/tmp}/prefetch.XXXXXX")

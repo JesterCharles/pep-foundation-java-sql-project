@@ -11,31 +11,42 @@ import com.pep.toolshare.lending.ToolRepository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Supplied: wraps the sample-data repositories so the completion checks can see that {@code LendingService} itself
- * used them. Every call is passed straight through; nothing else changes.
+ * Supplied: wraps the sample-data repositories so the completion checks can see which code called them, for example
+ * that {@code LendingService} itself used them. Every call is passed straight through; nothing else changes.
  */
 final class ServiceCalls {
-    private static final String SERVICE = "com.pep.toolshare.lending.LendingService";
-    private static final StackWalker WALKER = StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);
-    private static final AtomicInteger COUNT = new AtomicInteger();
+    private static final StackWalker WALKER = StackWalker.getInstance(StackWalker.Option.SHOW_HIDDEN_FRAMES);
+    private static final Map<String, AtomicInteger> CALLS = new ConcurrentHashMap<>();
+    private static final Set<String> PLATFORM = Set.of("java.", "jdk.", "sun.");
 
     private ServiceCalls() {
     }
 
-    static int count() {
-        return COUNT.get();
+    /** Calls made by {@code type}, its nested classes and its lambdas and method references. */
+    static int callsFrom(String type) {
+        int total = 0;
+        for (Map.Entry<String, AtomicInteger> entry : CALLS.entrySet()) {
+            if (entry.getKey().equals(type) || entry.getKey().startsWith(type + "$")) {
+                total += entry.getValue().get();
+            }
+        }
+        return total;
     }
 
-    /** Counts the call when the method that called the repository belongs to LendingService. */
+    /**
+     * Notes the class that called the repository: the first frame above the wrapper that is not Java's own code, so a
+     * method reference such as {@code .map(tools::findByCode)} is credited to the class that wrote it.
+     */
     private static void seen() {
-        Class<?> caller = WALKER.walk(frames -> frames.skip(2).findFirst())
-                .map(StackWalker.StackFrame::getDeclaringClass).orElse(null);
-        if (caller != null && (caller.getName().equals(SERVICE) || caller.getName().startsWith(SERVICE + "$"))) {
-            COUNT.incrementAndGet();
-        }
+        WALKER.walk(frames -> frames.skip(2).map(StackWalker.StackFrame::getClassName)
+                        .filter(name -> PLATFORM.stream().noneMatch(name::startsWith)).findFirst())
+                .ifPresent(name -> CALLS.computeIfAbsent(name, key -> new AtomicInteger()).incrementAndGet());
     }
 
     static Stores wrap(Stores stores) {
