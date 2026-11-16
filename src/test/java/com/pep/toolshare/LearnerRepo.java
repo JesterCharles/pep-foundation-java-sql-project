@@ -210,34 +210,34 @@ public final class LearnerRepo {
         List<String> codeFiles = files.stream().filter(file -> !file.equals("WORKLOG.md")).toList();
         List<String> evidenceFiles = codeFiles.isEmpty() ? files : codeFiles;
         String base = baseline();
-        String delivered = null;
+        // A pushed copy counts only when its local branch was deleted; otherwise the local branch decides.
         List<String> candidates = new ArrayList<>(local);
-        candidates.addAll(pushed);
+        pushed.stream().filter(copy -> !local.contains(copy.substring(remote.length() + 1))).forEach(candidates::add);
+        List<String> merged = new ArrayList<>();
         for (String branch : candidates) {
             List<String> args = new ArrayList<>(List.of("rev-list", base + ".." + branch, "--"));
             args.addAll(evidenceFiles);
             boolean touches = !git(args.toArray(String[]::new)).lines().isEmpty();
             if (touches && ok("merge-base", "--is-ancestor", branch, MAIN)) {
-                if (delivered == null) {
-                    delivered = branch;
-                }
-                // Prefer a branch that is already pushed, so an unpushed exercise branch (m1/notes-a) does not
-                // hide a delivered and pushed one (m1/team-workflow).
-                if (!local.contains(branch) || isPushed(remote, branch)) {
-                    delivered = branch;
-                    break;
-                }
+                merged.add(branch);
             }
         }
         String example = local.isEmpty() ? prefix + "my-topic" : local.get(0);
-        assertTrue(delivered != null, "No " + prefix + "* branch has commits that change this milestone's files"
+        assertTrue(!merged.isEmpty(), "No " + prefix + "* branch has commits that change this milestone's files"
                 + " and is merged into main. Commit your work on " + example
                 + ", then: git switch main && git merge " + example);
         assertMainPushed();
-        if (local.contains(delivered)) {
-            assertTrue(isPushed(remote, delivered),
-                    "Push your milestone branch too: git push -u " + remote + " " + delivered);
+        // A pushed branch delivers the milestone, so an unpushed exercise branch (m1/notes-a) cannot hide it.
+        if (merged.stream().anyMatch(branch -> !local.contains(branch) || isPushed(remote, branch))) {
+            return;
         }
+        // None is pushed: name the branch the others were made from (m1/team-workflow, not m1/notes-a), or all of
+        // them when that is not clear.
+        List<String> bases = merged.stream().filter(branch -> merged.stream().noneMatch(other ->
+                !other.equals(branch) && ok("merge-base", "--is-ancestor", other, branch)
+                        && !ok("merge-base", "--is-ancestor", branch, other))).toList();
+        String toPush = String.join(" ", bases.size() == 1 ? bases : merged);
+        fail("Push your milestone branch too: git push -u " + remote + " " + toPush);
     }
 
     /** The local branch's commits are all on its pushed copy, for example origin/m1/team-workflow. */
