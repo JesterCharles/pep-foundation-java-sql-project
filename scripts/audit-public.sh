@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Privacy scan of tracked files and reachable history: no generated or local-only artifacts, no solved overlays, no
+# private paths, keys or tokens. Safe to run at any milestone; starter-only rules live in verify-milestones.sh starter.
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd -P)
@@ -22,7 +24,7 @@ if git ls-files | grep -Eq '(^|/)milestone-[0-9]+/'; then
     exit 1
 fi
 
-sensitive='(/Users/[^/]+/|BEGIN (RSA|OPENSSH|EC) PRIVATE KEY|gh[pousr]_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16})'
+sensitive='(/Users/[^/]+/|/home/[^/]+/|BEGIN (RSA|OPENSSH|EC) PRIVATE KEY|gh[pousr]_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16})'
 if git grep -I -n -E "$sensitive" -- . ':!scripts/audit-public.sh'; then
     echo "Potential private path, key, or credential found in tracked files." >&2
     exit 1

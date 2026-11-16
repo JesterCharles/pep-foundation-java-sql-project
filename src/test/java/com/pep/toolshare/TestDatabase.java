@@ -4,65 +4,83 @@ import com.pep.toolshare.db.ConnectionFactory;
 import com.pep.toolshare.db.DatabaseManager;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.concurrent.atomic.AtomicInteger;
 
-final class TestDatabase {
+/** A fresh in-memory database with the project schema and seed data, separate from the local data/ folder. */
+public final class TestDatabase {
     private static final AtomicInteger NEXT_ID = new AtomicInteger();
+    private static final AtomicInteger CREATED = new AtomicInteger();
+    private static final AtomicInteger READS = new AtomicInteger();
+    private static final AtomicInteger REPOSITORY_OPENS = new AtomicInteger();
+    private static final String LOAN_REPOSITORY = "com.pep.toolshare.jdbc.JdbcLoanRepository";
 
     private TestDatabase() {
     }
 
-    static ConnectionFactory create() {
-        String url = "jdbc:h2:mem:toolshare_" + NEXT_ID.incrementAndGet()
+    public static String newUrl() {
+        return "jdbc:h2:mem:lantern_test_" + NEXT_ID.incrementAndGet()
                 + ";MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1";
-        ConnectionFactory connections = ConnectionFactory.forUrl(url);
-        DatabaseManager.reset(connections);
-        return connections;
     }
 
-    static void execute(ConnectionFactory connections, String sql) throws SQLException {
+    /**
+     * Creates the database and runs schema.sql and seed.sql. The returned factory also notes each connection that
+     * JdbcLoanRepository opens, so the checks can see your tests exercised it.
+     */
+    public static ConnectionFactory create() {
+        ConnectionFactory connections = ConnectionFactory.forUrl(newUrl());
+        DatabaseManager.reset(connections);
+        CREATED.incrementAndGet();
+        return () -> {
+            if (StackWalker.getInstance().walk(frames -> frames.anyMatch(frame ->
+                    frame.getClassName().equals(LOAN_REPOSITORY)
+                            || frame.getClassName().startsWith(LOAN_REPOSITORY + "$")))) {
+                REPOSITORY_OPENS.incrementAndGet();
+            }
+            return connections.open();
+        };
+    }
+
+    /** How many connections JdbcLoanRepository has opened on databases from {@link #create()} in this test run. */
+    public static int repositoryOpens() {
+        return REPOSITORY_OPENS.get();
+    }
+
+    /** How many databases {@link #create()} has made in this test run. */
+    public static int created() {
+        return CREATED.get();
+    }
+
+    /** How many times {@link #count} or {@link #text} has read a database back in this test run. */
+    public static int reads() {
+        return READS.get();
+    }
+
+    public static void execute(ConnectionFactory connections, String sql) throws SQLException {
         try (Connection connection = connections.open();
              Statement statement = connection.createStatement()) {
             statement.execute(sql);
         }
     }
 
-    static long count(ConnectionFactory connections, String table) throws SQLException {
+    public static long count(ConnectionFactory connections, String sql) throws SQLException {
+        READS.incrementAndGet();
         try (Connection connection = connections.open();
              Statement statement = connection.createStatement();
-             ResultSet rows = statement.executeQuery("SELECT COUNT(*) FROM " + table)) {
+             ResultSet rows = statement.executeQuery(sql)) {
             rows.next();
             return rows.getLong(1);
         }
     }
 
-    static String toolStatus(ConnectionFactory connections, long toolId) throws SQLException {
+    public static String text(ConnectionFactory connections, String sql) throws SQLException {
+        READS.incrementAndGet();
         try (Connection connection = connections.open();
-             PreparedStatement statement = connection.prepareStatement(
-                     "SELECT status FROM tools WHERE id = ?")) {
-            statement.setLong(1, toolId);
-            try (ResultSet rows = statement.executeQuery()) {
-                if (!rows.next()) {
-                    throw new AssertionError("Missing test tool " + toolId);
-                }
-                return rows.getString("status");
-            }
-        }
-    }
-
-    static long activeLoansForTool(ConnectionFactory connections, long toolId) throws SQLException {
-        try (Connection connection = connections.open();
-             PreparedStatement statement = connection.prepareStatement(
-                     "SELECT COUNT(*) FROM loans WHERE tool_id = ? AND returned_on IS NULL")) {
-            statement.setLong(1, toolId);
-            try (ResultSet rows = statement.executeQuery()) {
-                rows.next();
-                return rows.getLong(1);
-            }
+             Statement statement = connection.createStatement();
+             ResultSet rows = statement.executeQuery(sql)) {
+            return rows.next() ? rows.getString(1) : null;
         }
     }
 }

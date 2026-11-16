@@ -5,34 +5,98 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.pep.foundation</groupId>
-    <artifactId>toolshare-jdbc</artifactId>
+    <artifactId>lantern-tool-library</artifactId>
     <version>1.0.0-SNAPSHOT</version>
-    <name>PEP Foundation Java and SQL Project</name>
+    <name>Lantern Tool Library (Foundation Project 1)</name>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>25</maven.compiler.release>
-        <junit.version>5.11.4</junit.version>
+        <junit.version>6.1.3</junit.version>
+        <javalin.version>7.2.3</javalin.version>
+        <jackson.version>2.22.1</jackson.version>
+        <slf4j.version>2.0.17</slf4j.version>
         <h2.version>2.3.232</h2.version>
         <completion.test.exclude>**/*CompletionTest.java</completion.test.exclude>
+        <!-- Your own tests (learner/) are not part of the health build, so unfinished tests of your own never make it
+             fail. The completion checks compile them and run them through their own checker; the coverage report
+             compiles and runs them directly. -->
+        <learner.compile.exclude>**/learner/**</learner.compile.exclude>
+        <learner.test.exclude>**/learner/**</learner.test.exclude>
+        <jacocoArgLine></jacocoArgLine>
     </properties>
 
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.junit</groupId>
+                <artifactId>junit-bom</artifactId>
+                <version>${junit.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
+        <dependency>
+            <groupId>io.javalin</groupId>
+            <artifactId>javalin</artifactId>
+            <version>${javalin.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
             <version>${h2.version}</version>
-            <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
-            <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-launcher</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- TODO LEARNER 4F: declare the org.mockito:mockito-core test dependency here, version 5.24.0 (see docs/milestones/4-http-api.md). -->
     </dependencies>
 
     <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-clean-plugin</artifactId>
+                    <version>3.5.0</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-resources-plugin</artifactId>
+                    <version>3.5.0</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>3.4.2</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-dependency-plugin</artifactId>
+                    <version>3.11.0</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -60,23 +124,44 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.13.0</version>
+                <version>3.15.0</version>
                 <configuration>
                     <parameters>true</parameters>
                     <compilerArgs>
-                        <arg>-Xlint:all</arg>
-                        <arg>-Werror</arg>
+                        <arg>-Xlint:all,-processing</arg>
                     </compilerArgs>
+                    <testExcludes>
+                        <testExclude>${learner.compile.exclude}</testExclude>
+                    </testExcludes>
                 </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.5.2</version>
+                <version>3.5.6</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.apache.maven.surefire</groupId>
+                        <artifactId>surefire-junit-platform</artifactId>
+                        <version>3.5.6</version>
+                    </dependency>
+                </dependencies>
                 <configuration>
                     <useModulePath>false</useModulePath>
+                    <trimStackTrace>true</trimStackTrace>
+                    <argLine>@{jacocoArgLine} -XX:+EnableDynamicAgentLoading -Xshare:off</argLine>
+                    <!-- Time limits, so a loop that never ends fails the run instead of hanging it: each test and
+                         setup method may take 20 seconds, and the whole test run 5 minutes. -->
+                    <forkedProcessTimeoutInSeconds>300</forkedProcessTimeoutInSeconds>
+                    <properties>
+                        <configurationParameters>
+                            junit.jupiter.execution.timeout.default = 20 s
+                            junit.jupiter.execution.timeout.thread.mode.default = SEPARATE_THREAD
+                        </configurationParameters>
+                    </properties>
                     <excludes>
                         <exclude>${completion.test.exclude}</exclude>
+                        <exclude>${learner.test.exclude}</exclude>
                     </excludes>
                 </configuration>
             </plugin>
@@ -93,10 +178,47 @@
 
     <profiles>
         <profile>
+            <!-- Runs every public completion test: mvn -q -Pcompletion test -->
             <id>completion</id>
             <properties>
                 <completion.test.exclude>**/NoCompletionTestsExcluded.java</completion.test.exclude>
+                <learner.compile.exclude>**/NoLearnerTestsExcluded.java</learner.compile.exclude>
             </properties>
+        </profile>
+        <profile>
+            <!-- Week 4 coverage report: mvn -q -Pcoverage verify, then open target/site/jacoco/index.html -->
+            <id>coverage</id>
+            <properties>
+                <learner.compile.exclude>**/NoLearnerTestsExcluded.java</learner.compile.exclude>
+                <learner.test.exclude>**/NoLearnerTestsExcluded.java</learner.test.exclude>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.jacoco</groupId>
+                        <artifactId>jacoco-maven-plugin</artifactId>
+                        <version>0.8.14</version>
+                        <executions>
+                            <execution>
+                                <id>prepare</id>
+                                <goals>
+                                    <goal>prepare-agent</goal>
+                                </goals>
+                                <configuration>
+                                    <propertyName>jacocoArgLine</propertyName>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>report</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>report</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
     </profiles>
 </project>

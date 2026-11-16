@@ -1,4 +1,4 @@
-name: starter-health
+name: project-checks
 
 on:
   push:
@@ -8,8 +8,9 @@ permissions:
   contents: read
 
 jobs:
-  verify-starter:
+  checks:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
@@ -21,7 +22,7 @@ jobs:
           cache: maven
       - name: Build and health tests
         run: ./scripts/health.sh
-      - name: Confirm every milestone fails in the untouched starter
-        run: ./scripts/verify-milestones.sh starter
-      - name: Audit public repository contents
+      - name: Milestone progress (reports PASS/FAIL per milestone; unfinished milestones do not fail this step)
+        run: ./scripts/verify-milestones.sh progress
+      - name: Privacy scan of tracked files and history
         run: ./scripts/audit-public.sh

@@ -11,17 +11,40 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-/** Creates and resets the deterministic local schema and synthetic fixtures. */
+/** Creates and resets the embedded database from {@code db/schema.sql} and {@code db/seed.sql}. */
 public final class DatabaseManager {
+    private static final Set<Integer> TABLE_NOT_FOUND = Set.of(42102, 42103, 42104);
+    private static final List<String> REQUIRED_TABLES = List.of("categories", "members", "tools", "loans");
+
     private DatabaseManager() {
     }
 
-    private static final Set<Integer> TABLE_NOT_FOUND = Set.of(42102, 42103, 42104);
-    private static final List<String> REQUIRED_TABLES = List.of("members", "tools", "loans");
-
+    /** Resets the database only when one of the project tables is missing. */
     public static void initializeIfNeeded(ConnectionFactory connections) {
         if (!schemaIsComplete(connections)) {
             reset(connections);
+        }
+    }
+
+    /**
+     * Drops everything, then runs the schema and the seed script. If a script fails, the database is left empty, so the
+     * next start creates it again.
+     */
+    public static void reset(ConnectionFactory connections) {
+        try (Connection connection = connections.open()) {
+            connection.setAutoCommit(false);
+            try {
+                execute(connection, "DROP ALL OBJECTS");
+                executeScript(connection, "/db/schema.sql");
+                executeScript(connection, "/db/seed.sql");
+                connection.commit();
+            } catch (SQLException exception) {
+                rollback(connection, exception);
+                dropAll(connection, exception);
+                throw new StorageException("Could not reset the database: " + exception.getMessage(), exception);
+            }
+        } catch (SQLException exception) {
+            throw new StorageException("Could not open the database for reset", exception);
         }
     }
 
@@ -40,24 +63,7 @@ public final class DatabaseManager {
             }
             return true;
         } catch (SQLException exception) {
-            throw new RepositoryException("Could not inspect the local database schema", exception);
-        }
-    }
-
-    public static void reset(ConnectionFactory connections) {
-        try (Connection connection = connections.open()) {
-            connection.setAutoCommit(false);
-            try {
-                execute(connection, "DROP ALL OBJECTS");
-                executeScript(connection, "/db/schema.sql");
-                executeScript(connection, "/db/seed.sql");
-                connection.commit();
-            } catch (SQLException exception) {
-                rollback(connection, exception);
-                throw new RepositoryException("Could not reset the database", exception);
-            }
-        } catch (SQLException exception) {
-            throw new RepositoryException("Could not open the database for reset", exception);
+            throw new StorageException("Could not inspect the database schema", exception);
         }
     }
 
@@ -91,6 +97,15 @@ public final class DatabaseManager {
     private static void execute(Connection connection, String sql) throws SQLException {
         try (Statement statement = connection.createStatement()) {
             statement.execute(sql);
+        }
+    }
+
+    private static void dropAll(Connection connection, SQLException original) {
+        try {
+            execute(connection, "DROP ALL OBJECTS");
+            connection.commit();
+        } catch (SQLException dropFailure) {
+            original.addSuppressed(dropFailure);
         }
     }
 

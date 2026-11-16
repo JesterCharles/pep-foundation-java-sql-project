@@ -1,8 +1,9 @@
 package com.pep.toolshare.domain;
 
-/** The lending state stored in the tools table. */
+/** Where a tool is in its lending life. Stored in the database as the constant name. */
 public enum ToolStatus {
     AVAILABLE,
     ON_LOAN,
-    MAINTENANCE
+    IN_REPAIR,
+    RETIRED
 }

@@ -5,7 +5,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Objects;
 
-/** Opens independent JDBC connections for repositories and services. */
+/** Opens a new JDBC connection each time it is asked. Callers close what they open. */
 @FunctionalInterface
 public interface ConnectionFactory {
     Connection open() throws SQLException;
