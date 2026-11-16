@@ -10,6 +10,7 @@ import com.pep.toolshare.lending.LendingService;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -72,5 +73,17 @@ class StoreSwapCompletionTest {
         assertEquals("memory", settings.get("LANTERN_STORE"), ".env.example: add LANTERN_STORE=memory");
         assertTrue(settings.getOrDefault("LANTERN_DB_URL", "").startsWith("jdbc:h2:"),
                 ".env.example: add LANTERN_DB_URL with the default embedded H2 URL, in single quotes");
+        for (String line : Files.readAllLines(LearnerRepo.ROOT.resolve(".env.example"))) {
+            String trimmed = line.strip();
+            if (!trimmed.startsWith("LANTERN_DB_URL=")) {
+                continue;
+            }
+            String value = trimmed.substring("LANTERN_DB_URL=".length()).strip();
+            boolean quoted = value.length() >= 2 && (value.charAt(0) == '\'' || value.charAt(0) == '"')
+                    && value.charAt(value.length() - 1) == value.charAt(0);
+            assertTrue(quoted || !value.contains(";"),
+                    ".env.example: put the LANTERN_DB_URL value in single quotes, because `source .env` "
+                            + "stops the value at the first ; and drops MODE and DATABASE_TO_LOWER");
+        }
     }
 }
