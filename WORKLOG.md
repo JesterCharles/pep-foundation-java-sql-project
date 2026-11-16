@@ -17,7 +17,7 @@ Acceptance: TODO LEARNER 1D
 ## Review of the assistant's proposal
 
 Read `review/assistant-proposal.md`, then decide `approve` or `request changes`. Give at least two `Evidence:`
-lines; each names a diff line as `line N` and says which claim it supports or contradicts.
+lines that name two different diff lines, each as `line N`; each line says which claim it supports or contradicts.
 
 Decision: TODO LEARNER 1D
 Evidence: TODO LEARNER 1D

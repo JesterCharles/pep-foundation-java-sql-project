@@ -39,5 +39,5 @@ request: match each claim in the summary with the diff lines below, then decide.
 
 ## Your review
 
-Write your decision and evidence in `WORKLOG.md` under "Review of the assistant's proposal". Each `Evidence:` line
-names a diff line as `line N` and says which summary claim it supports or contradicts.
+Write your decision and evidence in `WORKLOG.md` under "Review of the assistant's proposal". Give at least two `Evidence:`
+lines that name two different diff lines, each as `line N`; each line says which summary claim it supports or contradicts.

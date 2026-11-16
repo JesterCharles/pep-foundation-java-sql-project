@@ -13,7 +13,7 @@ cloud account, external database server or real credential.
 ## Prerequisites
 
 - From Day 1: Git 2.38 or newer (`git --version`) and a terminal with `bash`.
-- From Thursday of Week 1, when the course installs them: JDK 25 (`java -version`) and Apache Maven 3.9 or newer
+- From Thursday of Week 1, when the course installs them: JDK 25 (`java -version`) and Apache Maven 3.9.x (Maven 4 is not supported)
   (`mvn -v`).
 - From Week 4: `curl` for trying the API.
 

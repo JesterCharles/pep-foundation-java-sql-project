@@ -79,7 +79,7 @@ executable bit.
 1. In `WORKLOG.md`, write your name and at least three stories as `As a <role>, I want <goal>, so that <benefit>`.
    Each story needs at least one testable `Acceptance:` line.
 2. Read `review/assistant-proposal.md`. Compare every claim with the numbered diff. Decide `approve` or
-   `request changes`, and write at least two `Evidence:` lines that each cite a diff line as `line N`. Never paste a
+   `request changes`, and write at least two `Evidence:` lines that cite two different diff lines, each as `line N`. Never paste a
    real secret into an assistant; note in your entry what context you shared and what you removed.
 
 ## 5. Git: branches, a conflict and a revert
