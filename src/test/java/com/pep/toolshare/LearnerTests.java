@@ -18,11 +18,11 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -39,22 +39,26 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Runs one of your own test classes and records what the run actually did: how many tests ran and passed, which tests
- * called Mockito mocks and which used the in-memory sample data instead, whether stubbings and verifications happened,
- * how many fresh test databases were created and read back, and which refusals (LendingException and its subclasses)
- * the code under test threw while your tests ran.
+ * made the code under test call a Mockito mock and which used the in-memory sample data instead, how many fresh test
+ * databases were created and read back, and which refusals (LendingException and its subclasses) the code under test
+ * threw while your tests ran. How you stub and verify your mocks is reviewed with your trainer, not checked here.
+ * A run that has not finished after {@link #RUN_LIMIT} is stopped and fails, so a loop that never ends cannot hang
+ * the checks.
  */
 public final class LearnerTests {
     private static final String LENDING_EXCEPTION = "com.pep.toolshare.lending.LendingException";
     private static final Map<String, Run> RUNS = new ConcurrentHashMap<>();
+    /** How long one run of your test class may take. */
+    static final Duration RUN_LIMIT = Duration.ofSeconds(10);
 
     private LearnerTests() {
     }
 
     /** What one run of a learner test class did. */
-    public record Run(String simpleName, long found, long succeeded, long failed, String failures,
-                      boolean mockitoPresent, int mocksCreated, int usedStubbings, int verifications,
-                      int passingTestsWithMocks, int passingFakeTests, int databasesCreated,
-                      int databaseReads, int passingReadBackTests, List<String> refusalsHandled) {
+    public record Run(String simpleName, boolean finished, long found, long succeeded, long failed,
+                      String failures, boolean mockitoPresent, int passingTestsWithMocks, int passingFakeTests,
+                      int databasesCreated, int databaseReads, int passingReadBackTests,
+                      List<String> refusalsHandled) {
     }
 
     /**
@@ -63,6 +67,9 @@ public final class LearnerTests {
      */
     public static Run assertRunsAndPasses(String className, int minimum, String thrower) {
         Run run = run(className, thrower);
+        assertTrue(run.finished(), run.simpleName() + " did not finish within " + RUN_LIMIT.toSeconds()
+                + " seconds and was stopped; look for a loop or a wait that never ends in your tests or the code they "
+                + "call");
         assertTrue(run.found() >= minimum, run.simpleName() + " needs at least " + minimum
                 + " @Test methods; found " + run.found());
         assertEquals(0, run.failed(), "your tests must pass:\n" + run.failures());
@@ -79,49 +86,95 @@ public final class LearnerTests {
         String key = className + " " + thrower;
         Run done = RUNS.get(key);
         if (done == null) {
-            done = runOnce(className, thrower);
+            done = runOnce(className, thrower, RUN_LIMIT);
             RUNS.put(key, done);
         }
         return done;
     }
 
-    private static Run runOnce(String className, String thrower) {
+    /** Runs {@code className} with a time limit; checks of this checker use a shorter limit than {@link #RUN_LIMIT}. */
+    static Run runOnce(String className, String thrower, Duration limit) {
         Class<?> type;
         try {
             type = Class.forName(className, false, LearnerTests.class.getClassLoader());
         } catch (ClassNotFoundException exception) {
             throw new AssertionError("Missing test class " + className, exception);
         }
-        MockitoProbe mockito = MockitoProbe.attach();
-        PerTest perTest = new PerTest(mockito, thrower);
-        SummaryGeneratingListener summaryListener = new SummaryGeneratingListener();
+        Worker worker = new Worker(type, thrower);
         int createdBefore = TestDatabase.created();
         int readsBefore = TestDatabase.reads();
         List<RecordedEvent> exceptions;
+        boolean finished;
         try (Recording recording = new Recording()) {
             recording.enable("jdk.JavaExceptionThrow").withStackTrace();
             recording.start();
+            // The tests run on their own daemon thread, so one that never ends can be left behind when the limit is up.
+            Thread thread = Thread.ofPlatform().daemon().name("learner-tests " + type.getSimpleName())
+                    .unstarted(worker);
+            thread.setContextClassLoader(Thread.currentThread().getContextClassLoader());
+            thread.start();
             try {
-                LauncherDiscoveryRequest discovery = request().selectors(selectClass(type)).build();
-                Launcher launcher = LauncherFactory.create();
-                launcher.execute(discovery, summaryListener, perTest);
+                finished = thread.join(limit);
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+                finished = false;
             } finally {
                 recording.stop();
-                if (mockito != null) {
-                    mockito.detach();
-                }
+            }
+            if (!finished) {
+                thread.interrupt();
+                return new Run(type.getSimpleName(), false, 0, 0, 0, "", false, 0, 0, 0, 0, 0, List.of());
             }
             exceptions = read(recording);
         }
-        TestExecutionSummary summary = summaryListener.getSummary();
+        if (worker.error != null) {
+            throw new AssertionError("Could not run " + type.getSimpleName() + ": " + worker.error, worker.error);
+        }
+        TestExecutionSummary summary = worker.summary.getSummary();
         StringWriter failures = new StringWriter();
         summary.printFailuresTo(new PrintWriter(failures), 5);
-        return new Run(type.getSimpleName(), summary.getTestsFoundCount(), summary.getTestsSucceededCount(),
-                summary.getTotalFailureCount(), failures.toString(), mockito != null,
-                mockito == null ? 0 : mockito.mocks.size(), mockito == null ? 0 : mockito.usedStubbings(),
-                mockito == null ? 0 : mockito.verifications, perTest.withMocks, perTest.fakes,
-                TestDatabase.created() - createdBefore, TestDatabase.reads() - readsBefore, perTest.readBacks,
-                refusalsHandled(exceptions, className, thrower));
+        PerTest perTest = worker.perTest;
+        return new Run(type.getSimpleName(), true, summary.getTestsFoundCount(), summary.getTestsSucceededCount(),
+                summary.getTotalFailureCount(), failures.toString(), worker.mockito != null, perTest.withMocks,
+                perTest.fakes, TestDatabase.created() - createdBefore, TestDatabase.reads() - readsBefore,
+                perTest.readBacks, refusalsHandled(exceptions, className, thrower));
+    }
+
+    /**
+     * Runs the test class through the JUnit Platform on its own thread. Mockito keeps its listeners per thread, so the
+     * listener is attached here, on the thread that runs your tests.
+     */
+    private static final class Worker implements Runnable {
+        private final Class<?> type;
+        private final String thrower;
+        private final SummaryGeneratingListener summary = new SummaryGeneratingListener();
+        private MockitoProbe mockito;
+        private PerTest perTest;
+        private Throwable error;
+
+        Worker(Class<?> type, String thrower) {
+            this.type = type;
+            this.thrower = thrower;
+        }
+
+        @Override
+        public void run() {
+            try {
+                mockito = MockitoProbe.attach();
+                perTest = new PerTest(mockito, thrower);
+                try {
+                    LauncherDiscoveryRequest discovery = request().selectors(selectClass(type)).build();
+                    Launcher launcher = LauncherFactory.create();
+                    launcher.execute(discovery, summary, perTest);
+                } finally {
+                    if (mockito != null) {
+                        mockito.detach();
+                    }
+                }
+            } catch (Throwable throwable) {
+                error = throwable;
+            }
+        }
     }
 
     private static List<RecordedEvent> read(Recording recording) {
@@ -225,9 +278,6 @@ public final class LearnerTests {
             if (!test.isTest()) {
                 return;
             }
-            if (mockito != null) {
-                mockito.sampleUsedStubbings();
-            }
             // This test's mock calls are the invocations that were not there when it started. Counting objects rather
             // than totals keeps a reset(...) in @BeforeEach, which clears earlier invocations, from hiding them.
             int calls = 0;
@@ -267,8 +317,6 @@ public final class LearnerTests {
      */
     private static final class MockitoProbe implements InvocationHandler {
         private final List<Object> mocks = new ArrayList<>();
-        private final Set<Object> used = Collections.newSetFromMap(new IdentityHashMap<>());
-        private int verifications;
         private Object framework;
         private Object listener;
         private Method removeListener;
@@ -281,8 +329,7 @@ public final class LearnerTests {
                 MockitoProbe probe = new MockitoProbe();
                 probe.framework = mockito.getMethod("framework").invoke(null);
                 probe.listener = Proxy.newProxyInstance(LearnerTests.class.getClassLoader(), new Class<?>[] {
-                        Class.forName("org.mockito.listeners.MockCreationListener"),
-                        Class.forName("org.mockito.listeners.VerificationListener")}, probe);
+                        Class.forName("org.mockito.listeners.MockCreationListener")}, probe);
                 frameworkType.getMethod("addListener", listenerType).invoke(probe.framework, probe.listener);
                 probe.removeListener = frameworkType.getMethod("removeListener", listenerType);
                 return probe;
@@ -344,38 +391,10 @@ public final class LearnerTests {
             return dot < 0 ? "" : method.substring(0, dot);
         }
 
-        /** Stubbings seen used after any test so far; a later reset(...) cannot take that credit back. */
-        int usedStubbings() {
-            sampleUsedStubbings();
-            return used.size();
-        }
-
-        /** Notes every stubbing that has been used by now. Called after each test, before a reset can clear it. */
-        void sampleUsedStubbings() {
-            try {
-                Class<?> mockito = Class.forName("org.mockito.Mockito");
-                Method details = mockito.getMethod("mockingDetails", Object.class);
-                Method stubbings = Class.forName("org.mockito.MockingDetails").getMethod("getStubbings");
-                Method wasUsed = Class.forName("org.mockito.stubbing.Stubbing").getMethod("wasUsed");
-                for (Object mock : mocks) {
-                    for (Object stubbing : (Collection<?>) stubbings.invoke(details.invoke(null, mock))) {
-                        if ((Boolean) wasUsed.invoke(stubbing)) {
-                            used.add(stubbing);
-                        }
-                    }
-                }
-            } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException exception) {
-                throw new AssertionError("Could not read Mockito stubbings: " + exception, exception);
-            } catch (InvocationTargetException exception) {
-                throw new AssertionError("Could not read Mockito stubbings: " + exception.getCause(), exception);
-            }
-        }
-
         @Override
         public Object invoke(Object proxy, Method method, Object[] args) {
             switch (method.getName()) {
                 case "onMockCreated" -> mocks.add(args[0]);
-                case "onVerification" -> verifications++;
                 case "hashCode" -> {
                     return System.identityHashCode(proxy);
                 }

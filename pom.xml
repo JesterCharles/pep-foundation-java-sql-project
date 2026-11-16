@@ -150,6 +150,15 @@
                     <useModulePath>false</useModulePath>
                     <trimStackTrace>true</trimStackTrace>
                     <argLine>@{jacocoArgLine} -XX:+EnableDynamicAgentLoading -Xshare:off</argLine>
+                    <!-- Time limits, so a loop that never ends fails the run instead of hanging it: each test and
+                         setup method may take 20 seconds, and the whole test run 3 minutes. -->
+                    <forkedProcessTimeoutInSeconds>180</forkedProcessTimeoutInSeconds>
+                    <properties>
+                        <configurationParameters>
+                            junit.jupiter.execution.timeout.default = 20 s
+                            junit.jupiter.execution.timeout.thread.mode.default = SEPARATE_THREAD
+                        </configurationParameters>
+                    </properties>
                     <excludes>
                         <exclude>${completion.test.exclude}</exclude>
                         <exclude>${learner.test.exclude}</exclude>

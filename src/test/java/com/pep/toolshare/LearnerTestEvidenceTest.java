@@ -5,7 +5,10 @@ import com.pep.toolshare.db.ConnectionFactory;
 import com.pep.toolshare.lending.RuleViolationException;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -37,6 +40,20 @@ class LearnerTestEvidenceTest {
         assertTrue(run.refusalsHandled().isEmpty(), "an exception the test creates itself must not count");
     }
 
+    @Test
+    void aTestThatNeverEndsIsStoppedAndFails() {
+        NeverEnds.armed = true;
+        try {
+            long start = System.nanoTime();
+            LearnerTests.Run run = LearnerTests.runOnce(NeverEnds.class.getName(), SERVICE, Duration.ofSeconds(2));
+            long seconds = Duration.ofNanos(System.nanoTime() - start).toSeconds();
+            assertFalse(run.finished(), "a test that never ends must be reported as unfinished");
+            assertTrue(seconds < 10, "the run must stop at its time limit; it took " + seconds + " seconds");
+        } finally {
+            NeverEnds.armed = false;
+        }
+    }
+
     static class FakeWithoutService {
         @Test
         void buildsTheSampleDataOnly() {
@@ -56,6 +73,18 @@ class LearnerTestEvidenceTest {
                 TestDatabase.count(database, "SELECT COUNT(*) FROM tools");
             } catch (Exception unfinished) {
                 // the schema may not be written yet
+            }
+        }
+    }
+
+    /** Spins without ever checking for an interrupt while armed, like a loop whose exit condition never comes true. */
+    static class NeverEnds {
+        static volatile boolean armed;
+
+        @Test
+        void spins() {
+            while (armed) {
+                Thread.onSpinWait();
             }
         }
     }

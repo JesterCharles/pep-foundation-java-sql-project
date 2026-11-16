@@ -87,7 +87,12 @@ Write at least four `@Test` methods in `learner/LendingServiceTest.java`, each a
 
 - one that uses `assertThrows` for a refused request that `LendingService` itself refuses;
 - one that gives `LendingService` the in-memory repositories (`SampleData.inMemory()`) as a fake and calls no mock;
-- one that uses a Mockito mock with `mock(...)`, `when(...).thenReturn(...)` and `verify(...)`.
+- one that gives `LendingService` a Mockito `mock(...)`, stubs the call the service makes with
+  `when(...).thenReturn(...)`, and checks that call with `verify(...)`.
+
+The check confirms that your tests pass, that `LendingService` itself throws the refusal, that one test runs the service
+on the fake, and that in one test the service calls a mock. Your trainer reviews how you stub and verify the mock in
+your walkthrough; the check does not test that part.
 
 Then look at coverage: `mvn -q -Pcoverage verify` and open `target/site/jacoco/index.html`. In your work log, note
 one branch of `LendingService` your tests do not cover yet.

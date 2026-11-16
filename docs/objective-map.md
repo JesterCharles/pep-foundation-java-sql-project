@@ -49,7 +49,8 @@ assumes the lessons taught up to it; nothing beyond the course is required.
   used, and `EXPLAIN` output has a different format.
 - **Pull requests:** pull-request notes go in `WORKLOG.md`. If your course Git server offers pull requests, you may
   also open them, but the checks read only your local Git history.
-- **Not checked automatically:** using an IDE debugger, `git stash` and rebase, and your recorded or live walkthrough.
+- **Not checked automatically:** using an IDE debugger, `git stash` and rebase, how your Milestone 4 tests stub
+  (`when(...).thenReturn(...)`) and `verify(...)` a mock, and your recorded or live walkthrough.
   Practise them as the guides suggest; your trainer reviews them.
 - **Shell control flow:** the missing-file `if` block in `bin/loan-summary.sh` is supplied, because shell conditionals
   are not part of the Week 1 lessons; Milestone 1 asks only for pipes, `grep`, `wc` and variables.
