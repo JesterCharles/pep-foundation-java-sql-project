@@ -4,8 +4,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -19,6 +21,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  */
 class LearnerHistoryTest {
     private static final String MARKER = "TODO " + "LEARNER ";
+
+    @TempDir
+    static Path noHooks;
+
     @Test
     void starterHistoryAloneIsNoLearnerWork(@TempDir Path repository) throws IOException {
         importStarterWithHistory(repository);
@@ -120,7 +126,7 @@ class LearnerHistoryTest {
         List<String> all = new ArrayList<>(List.of("-c", "user.name=Learner", "-c", "user.email=learner@example.test",
                 "-c", "commit.gpgsign=false", "-c", "merge.ff=true"));
         all.addAll(List.of(args));
-        return LearnerRepo.git(repository, all.toArray(String[]::new));
+        return run(repository, all.toArray(String[]::new));
     }
 
     private static String head(Path repository) {
@@ -128,8 +134,21 @@ class LearnerHistoryTest {
     }
 
     private static LearnerRepo.Result git(Path repository, String... args) {
-        LearnerRepo.Result result = LearnerRepo.git(repository, args);
+        LearnerRepo.Result result = run(repository, args);
         assertEquals(0, result.exitCode(), "git " + String.join(" ", args) + ": " + result.err());
         return result;
+    }
+
+    private static LearnerRepo.Result run(Path repository, String... args) {
+        List<String> command = new ArrayList<>(List.of("git", "-c", "core.quotepath=off",
+                "-c", "core.hooksPath=" + noHooks));
+        command.addAll(List.of(args));
+        ProcessBuilder builder = new ProcessBuilder(command).directory(repository.toFile());
+        builder.environment().keySet().removeIf(name -> name.startsWith("GIT_"));
+        try {
+            return LearnerRepo.run(builder, Duration.ofSeconds(15), "git " + String.join(" ", args));
+        } catch (IOException exception) {
+            throw new UncheckedIOException(exception);
+        }
     }
 }

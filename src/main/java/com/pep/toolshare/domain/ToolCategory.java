@@ -31,6 +31,7 @@ public enum ToolCategory {
         throw new UnsupportedOperationException("TODO LEARNER 3B: maxLoanDays");
     }
 
+    /** The due date of a loan made on {@code loanedOn}: {@code loanedOn} plus {@link #maxLoanDays()} days. */
     public LocalDate dueDate(LocalDate loanedOn) {
         throw new UnsupportedOperationException("TODO LEARNER 3B: dueDate");
     }

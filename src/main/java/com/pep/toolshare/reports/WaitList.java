@@ -46,7 +46,10 @@ public final class WaitList<T> {
         throw new UnsupportedOperationException("TODO LEARNER 6B: size");
     }
 
-    /** The waiting entries, front first, as a list that cannot be modified. */
+    /**
+     * The waiting entries, front first, as a copy taken at call time that cannot be modified: later changes to the
+     * wait list do not change it.
+     */
     public List<T> snapshot() {
         // TODO LEARNER 6B
         throw new UnsupportedOperationException("TODO LEARNER 6B: snapshot");

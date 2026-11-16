@@ -5,7 +5,8 @@ import java.util.Objects;
 /**
  * A library member. Every {@code Member} object is valid from the moment it is constructed: the constructor and
  * {@link #changeEmail(String)} reject bad values with {@link IllegalArgumentException}, and {@code null} for a
- * required value with {@link NullPointerException}.
+ * required value with {@link NullPointerException} that carries a message naming the value (for example
+ * {@code Objects.requireNonNull(id, "id")}).
  *
  * <p>Rules: the id is {@code M-} plus four digits; the full name is not blank and is stored stripped; the email is
  * stored stripped and lower-case and has exactly one {@code @}, with text before the {@code @}, text between the

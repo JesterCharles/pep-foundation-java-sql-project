@@ -90,7 +90,8 @@ LANTERN_STORE=jdbc mvn -q compile exec:java -Dexec.args=serve
 Write at least three `@Test` methods in `learner/JdbcLoanRepositoryTest.java`. Start each from
 `TestDatabase.create()` (a fresh in-memory database with the sample data), include an `assertThrows` for a refused
 checkout or checkin, and in at least one test call `JdbcLoanRepository` and then read the tables back with
-`TestDatabase.count` or `TestDatabase.text`.
+`TestDatabase.count` or `TestDatabase.text`. Every one of your tests must run and pass: a `@Disabled` or skipped test
+fails the check.
 
 ## Steps
 

@@ -65,6 +65,8 @@ Rules:
 - Other events are lines that are neither checkouts nor returns (use `grep -v`).
 - Count with pipes and `wc -l`. A count of zero is normal, not an error: `grep` exits with status 1 when nothing
   matches, which stops a `set -e` script unless you handle it (for example `(grep ... || true) | wc -l`).
+  On macOS, `wc -l` pads its count with spaces (`      14`); strip them with `wc -l | tr -d ' '` so the output reads
+  `Checkouts: 14`.
 - `Location:` shows the exported `LANTERN_LOCATION` variable, or `(not set)` when it is missing.
   Try `export LANTERN_LOCATION="Riverside branch"` and run the script again.
 - A missing log file prints `No such log file: <path>` to standard error, prints nothing else, and exits with

@@ -12,7 +12,7 @@ import java.util.Objects;
 public final class ReturnCart {
     // TODO LEARNER 6B: choose the collection for a last-in-first-out stack.
 
-    /** Puts a tool code on top of the cart. {@code null} is rejected. */
+    /** Puts a tool code on top of the cart. {@code null} throws {@link NullPointerException}. */
     public void drop(String toolCode) {
         // TODO LEARNER 6B
         throw new UnsupportedOperationException("TODO LEARNER 6B: drop");

@@ -38,7 +38,7 @@ Values are stripped and a blank value counts as missing. `toString()` shows `adm
 
 | Request | Rule | Exception |
 | --- | --- | --- |
-| any | blank member id or tool code; tool code that is not valid after `normalizeToolCode`; unknown category | `InvalidRequestException` |
+| any | missing, `null` or blank member id or tool code; tool code that is not valid after `normalizeToolCode`; unknown category | `InvalidRequestException` |
 | any | unknown member, tool or loan | `NotFoundException` |
 | checkout | member not active; tool not `AVAILABLE`; member already has 3 open loans (the message names the limit, 3) | `RuleViolationException` |
 | checkout | due date is today plus the category's maximum loan days | |
@@ -48,7 +48,7 @@ Values are stripped and a blank value counts as missing. `toString()` shows `adm
 | receipt | loan not returned yet | `RuleViolationException` |
 
 Logging with SLF4J: a successful checkout logs at INFO with the loan id, tool code and member id; a refused checkout
-logs at WARN with the reason. Never log a member's name or email.
+logs at WARN with the reason and the tool code. Never log a member's name or email.
 
 ## Routes (4E)
 
@@ -92,7 +92,8 @@ Write at least four `@Test` methods in `learner/LendingServiceTest.java`, each a
 
 The check confirms that your tests pass, that `LendingService` itself throws the refusal, that one test runs the service
 on the fake, and that in one test the service calls a mock. Your trainer reviews how you stub and verify the mock in
-your walkthrough; the check does not test that part.
+your walkthrough; the check does not test that part. Every one of your tests must run and pass: a `@Disabled` or
+skipped test fails the check.
 
 Then look at coverage: `mvn -q -Pcoverage verify` and open `target/site/jacoco/index.html`. In your work log, note
 one branch of `LendingService` your tests do not cover yet.
