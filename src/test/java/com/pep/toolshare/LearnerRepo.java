@@ -218,8 +218,15 @@ public final class LearnerRepo {
             args.addAll(evidenceFiles);
             boolean touches = !git(args.toArray(String[]::new)).lines().isEmpty();
             if (touches && ok("merge-base", "--is-ancestor", branch, MAIN)) {
-                delivered = branch;
-                break;
+                if (delivered == null) {
+                    delivered = branch;
+                }
+                // Prefer a branch that is already pushed, so an unpushed exercise branch (m1/notes-a) does not
+                // hide a delivered and pushed one (m1/team-workflow).
+                if (!local.contains(branch) || isPushed(remote, branch)) {
+                    delivered = branch;
+                    break;
+                }
             }
         }
         String example = local.isEmpty() ? prefix + "my-topic" : local.get(0);
@@ -228,11 +235,16 @@ public final class LearnerRepo {
                 + ", then: git switch main && git merge " + example);
         assertMainPushed();
         if (local.contains(delivered)) {
-            String remoteBranch = remote + "/" + delivered;
-            assertTrue(ok("rev-parse", "--verify", "--quiet", "refs/remotes/" + remoteBranch)
-                            && ok("merge-base", "--is-ancestor", delivered, remoteBranch),
+            assertTrue(isPushed(remote, delivered),
                     "Push your milestone branch too: git push -u " + remote + " " + delivered);
         }
+    }
+
+    /** The local branch's commits are all on its pushed copy, for example origin/m1/team-workflow. */
+    private static boolean isPushed(String remote, String branch) {
+        String remoteBranch = remote + "/" + branch;
+        return remote != null && ok("rev-parse", "--verify", "--quiet", "refs/remotes/" + remoteBranch)
+                && ok("merge-base", "--is-ancestor", branch, remoteBranch);
     }
 
     /** The remote name of main's upstream (for example origin), or null when main has no upstream yet. */
