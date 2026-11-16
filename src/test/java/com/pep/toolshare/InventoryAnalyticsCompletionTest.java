@@ -10,6 +10,7 @@ import com.pep.toolshare.reports.InventoryAnalytics;
 import com.pep.toolshare.reports.ToolUsage;
 import org.junit.jupiter.api.Test;
 
+import java.io.Serial;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -106,6 +107,9 @@ class InventoryAnalyticsCompletionTest {
 
     /** A list that can only be read with stream(): loops, get, forEach and toArray stop with a hint. */
     private static final class StreamOnlyList<T> extends ArrayList<T> {
+        @Serial
+        private static final long serialVersionUID = 1L;
+
         StreamOnlyList(List<T> items) {
             super(items);
         }
