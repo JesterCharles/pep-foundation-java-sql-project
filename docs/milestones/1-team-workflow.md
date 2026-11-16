@@ -99,6 +99,9 @@ git merge m1/team-workflow
 git push -u origin main
 ```
 
+Do the conflict and revert exercises below only after you have merged `m1/team-workflow` into `main`: the check
+counts your work from your first Milestone 1 change onwards, so exercises done earlier are not seen.
+
 Conflict exercise: change the same line on two branches, then merge both.
 
 ```bash
