@@ -4,12 +4,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -19,7 +18,7 @@ class LoanSummaryScriptCompletionTest {
     private record Run(int exitCode, String out, String err) {
     }
 
-    private static Run run(Map<String, String> env, String... args) throws IOException, InterruptedException {
+    private static Run run(Map<String, String> env, String... args) throws IOException {
         Path script = LearnerRepo.ROOT.resolve("bin/loan-summary.sh");
         assertTrue(Files.isExecutable(script),
                 "bin/loan-summary.sh is not executable. Run: chmod 750 bin/loan-summary.sh");
@@ -29,12 +28,8 @@ class LoanSummaryScriptCompletionTest {
         builder.directory(LearnerRepo.ROOT.toFile());
         builder.environment().remove("LANTERN_LOCATION");
         builder.environment().putAll(env);
-        Process process = builder.start();
-        process.getOutputStream().close();
-        String out = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-        String err = new String(process.getErrorStream().readAllBytes(), StandardCharsets.UTF_8);
-        assertTrue(process.waitFor(30, TimeUnit.SECONDS), "the script did not finish within 30 seconds");
-        return new Run(process.exitValue(), out, err);
+        LearnerRepo.Result result = LearnerRepo.run(builder, Duration.ofSeconds(15), "bin/loan-summary.sh");
+        return new Run(result.exitCode(), result.out(), result.err());
     }
 
     @Test

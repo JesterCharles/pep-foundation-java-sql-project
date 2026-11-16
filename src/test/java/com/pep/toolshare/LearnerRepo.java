@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -33,27 +34,48 @@ public final class LearnerRepo {
     }
 
     public static Result git(String... args) {
-        List<String> command = new ArrayList<>();
-        command.add("git");
-        command.add("-c");
-        command.add("core.quotepath=off");
+        return git(ROOT, args);
+    }
+
+    static Result git(Path repository, String... args) {
+        List<String> command = new ArrayList<>(List.of("git", "-c", "core.quotepath=off"));
         command.addAll(Arrays.asList(args));
+        ProcessBuilder builder = new ProcessBuilder(command).directory(repository.toFile());
         try {
-            Process process = new ProcessBuilder(command).directory(ROOT.toFile()).start();
-            process.getOutputStream().close();
-            byte[] out = process.getInputStream().readAllBytes();
-            byte[] err = process.getErrorStream().readAllBytes();
-            if (!process.waitFor(60, TimeUnit.SECONDS)) {
-                process.destroyForcibly();
-                fail("git " + String.join(" ", args) + " did not finish");
-            }
-            return new Result(process.exitValue(), new String(out, StandardCharsets.UTF_8),
-                    new String(err, StandardCharsets.UTF_8));
+            return run(builder, Duration.ofSeconds(15), "git " + String.join(" ", args));
         } catch (IOException exception) {
             throw new AssertionError("Git is not installed or not on the PATH: " + exception.getMessage(), exception);
-        } catch (InterruptedException exception) {
-            Thread.currentThread().interrupt();
-            throw new AssertionError("Interrupted while running git", exception);
+        }
+    }
+
+    /**
+     * Runs {@code builder} with no input and its output kept in temporary files, so a full output pipe cannot stall
+     * it. A process still running after {@code limit} is stopped, together with every process it started, and fails.
+     */
+    static Result run(ProcessBuilder builder, Duration limit, String name) throws IOException {
+        Path out = Files.createTempFile("lantern-out", ".txt");
+        Path err = Files.createTempFile("lantern-err", ".txt");
+        try {
+            builder.redirectOutput(out.toFile()).redirectError(err.toFile());
+            Process process = builder.start();
+            process.getOutputStream().close();
+            boolean finished;
+            try {
+                finished = process.waitFor(limit.toMillis(), TimeUnit.MILLISECONDS);
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+                finished = false;
+            }
+            if (!finished) {
+                process.descendants().forEach(ProcessHandle::destroyForcibly);
+                process.destroyForcibly();
+                fail(name + " did not finish within " + limit.toSeconds() + " seconds and was stopped");
+            }
+            return new Result(process.exitValue(), new String(Files.readAllBytes(out), StandardCharsets.UTF_8),
+                    new String(Files.readAllBytes(err), StandardCharsets.UTF_8));
+        } finally {
+            Files.deleteIfExists(out);
+            Files.deleteIfExists(err);
         }
     }
 
@@ -77,21 +99,49 @@ public final class LearnerRepo {
                 "Your repository has no local branch named main.");
     }
 
-    /** The commit that first added WORKLOG.md to main: the starting point you received. */
+    /**
+     * The starting point you received: the newest commit on main whose Milestone 1 files are still untouched (the
+     * script still says its summary is not written, WORKLOG.md has no name, .env.example lists no LANTERN_PORT and
+     * .gitignore does not ignore .env). It depends only on file contents, so any history that came with the starter is
+     * left out however it was imported.
+     */
     public static String baseline() {
-        List<String> adds = git("log", MAIN, "--diff-filter=A", "--format=%H", "--", "WORKLOG.md").lines();
-        assertTrue(!adds.isEmpty(), "WORKLOG.md is missing from the history of main.");
-        return adds.get(adds.size() - 1);
+        return baseline(ROOT);
+    }
+
+    static String baseline(Path repository) {
+        for (String commit : git(repository, "rev-list", MAIN).lines()) {
+            if (untouchedStarter(repository, commit)) {
+                return commit;
+            }
+        }
+        throw new AssertionError("main has no commit with the untouched starter files, so your own commits cannot be "
+                + "told apart from the starter. Ask your trainer.");
+    }
+
+    private static boolean untouchedStarter(Path repository, String commit) {
+        return found(repository, commit, "-F", "summary not written yet", "bin/loan-summary.sh")
+                && found(repository, commit, "-F", "Name: TODO LEARNER 1D", "WORKLOG.md")
+                && !found(repository, commit, "-E", "^LANTERN_PORT=", ".env.example")
+                && !found(repository, commit, "-E", "^[^#]*\\.env", ".gitignore");
+    }
+
+    private static boolean found(Path repository, String commit, String mode, String pattern, String file) {
+        return git(repository, "grep", "-q", mode, "-e", pattern, commit, "--", file).exitCode() == 0;
     }
 
     /** Commits on main made after the starting point, newest first. */
     public static List<String> learnerCommitsOnMain(boolean includeMerges) {
+        return learnerCommitsOnMain(ROOT, includeMerges);
+    }
+
+    static List<String> learnerCommitsOnMain(Path repository, boolean includeMerges) {
         List<String> args = new ArrayList<>(List.of("rev-list"));
         if (!includeMerges) {
             args.add("--no-merges");
         }
-        args.add(baseline() + ".." + MAIN);
-        return git(args.toArray(String[]::new)).lines();
+        args.add(baseline(repository) + ".." + MAIN);
+        return git(repository, args.toArray(String[]::new)).lines();
     }
 
     /** The remote main is pushed to, for example origin; fails with guidance when main has no upstream. */

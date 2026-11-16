@@ -109,8 +109,9 @@ instead of `psql` (no backslash commands such as `\dt`; use `SHOW TABLES;`), and
 
 ## Platform import
 
-For course platforms that create one repository per learner: import this repository's default branch `main` as a
-single snapshot. Nothing else is required: no extra branches, tags, history, secrets or services, and no network access
+For course platforms that create one repository per learner: import this repository's default branch `main`, as a
+single snapshot or with its history: the checks count only commits made after the untouched starter. Nothing else is
+required: no extra branches, tags, secrets or services, and no network access
 at run time once `./scripts/prefetch.sh` has downloaded the dependencies (run it again after adding one, as in
 Milestone 4). The checks work with any repository owner, URL or remote name.
 

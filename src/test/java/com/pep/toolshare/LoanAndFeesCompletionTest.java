@@ -103,7 +103,7 @@ class LoanAndFeesCompletionTest {
                 fourDaysLate));
         assertInstanceOf(StandardFeePolicy.class, FeePolicies.forTier(MemberTier.STARTER));
         assertEquals(0, FeePolicies.waived().feeCents(open(), ToolCategory.POWER, fourDaysLate));
-        assertEquals("Custom fee policy", FeePolicies.waived().describe(), "a lambda keeps the default method");
+        assertEquals("Custom fee policy", FeePolicies.waived().describe(), "an anonymous class that does not override describe() keeps the default method");
     }
 
     @Test
