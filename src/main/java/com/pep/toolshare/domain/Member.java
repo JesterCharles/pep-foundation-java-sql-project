@@ -8,8 +8,9 @@ import java.util.Objects;
  * required value with {@link NullPointerException}.
  *
  * <p>Rules: the id is {@code M-} plus four digits; the full name is not blank and is stored stripped; the email is
- * stored stripped and lower-case and has exactly one {@code @} with text before it and a {@code .} somewhere after
- * it; the tier is required; {@code referredBy} is either {@code null} or another member's valid id.
+ * stored stripped and lower-case and has exactly one {@code @}, with text before the {@code @}, text between the
+ * {@code @} and a later {@code .}, and text after that {@code .} (so {@code a@.test} and {@code a@b.} are
+ * rejected); the tier is required; {@code referredBy} is either {@code null} or another member's valid id.
  */
 public final class Member {
     private final String id;

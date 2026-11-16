@@ -35,6 +35,10 @@ public enum ToolCategory {
         throw new UnsupportedOperationException("TODO LEARNER 3B: dueDate");
     }
 
+    /**
+     * The constant whose name matches {@code code} after strip, in any letter case: {@code " garden "} gives
+     * {@code GARDEN}. A {@code null}, blank or unknown code throws {@link IllegalArgumentException}.
+     */
     public static ToolCategory fromCode(String code) {
         throw new UnsupportedOperationException("TODO LEARNER 3B: fromCode");
     }
