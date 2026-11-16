@@ -32,15 +32,15 @@ constant's values; `Receipts.java` shows a complete example receipt.
 
 1. `git switch main && git pull`, then `git switch -c m3/domain-model`.
 2. Start with `Member`: reject `null` with `NullPointerException` (`Objects.requireNonNull`) and bad values with
-   `IllegalArgumentException`. The same rule applies to the constructors of `Tool`, `ToolKit`, `Loan` and
-   `GraceFeePolicy`. Fields are `private final` unless they really change.
+   `IllegalArgumentException`. The same rule applies to the constructors of `Tool`, `ToolKit`, `Loan`,
+   `StandardFeePolicy` and `GraceFeePolicy`. Fields are `private final` unless they really change.
 3. `Lendable` is abstract: `Tool` and `ToolKit` extend it and call `super(code, name)` first. A kit holds a list of
    tools; it is not a tool itself.
 4. `FeePolicy` is an interface. `GraceFeePolicy` wraps another policy instead of extending it. `FeePolicies.forTier`
    chooses the policy so callers never name the classes.
 5. Use `==` for enum constants and `equals` for strings; know why.
 6. Run `mvn -q -Pcompletion test -Dtest='MemberCompletionTest,ToolCatalogCompletionTest,LoanAndFeesCompletionTest'`
-   while you work. `mvn -q dependency:tree` shows which libraries Maven resolved for the project.
+   while you work. `mvn dependency:tree` shows which libraries Maven resolved for the project.
 7. Commit in small steps and push the branch. Fill in `### M3` in `WORKLOG.md`, commit, merge into `main`, push.
 
 ## Check

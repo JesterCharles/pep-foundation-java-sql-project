@@ -6,7 +6,8 @@ import java.time.LocalDate;
 
 /**
  * The standard late fee: the category's daily fee for every day late, capped at {@code capCents}. Reuse
- * {@link LendingMath#lateFeeCents(int, long, long)}. The cap must be zero or more.
+ * {@link LendingMath#lateFeeCents(int, long, long)}. The cap must be zero or more: a negative cap throws
+ * {@link IllegalArgumentException}.
  */
 public class StandardFeePolicy implements FeePolicy {
     /** The library-wide cap: $20.00. */
