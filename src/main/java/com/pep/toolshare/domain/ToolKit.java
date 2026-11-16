@@ -8,7 +8,8 @@ import java.util.Objects;
  * A kit lent as one item, made of several tools (for example a "Deck repair kit"). A kit <em>has</em> tools; it is
  * not itself a kind of tool, so it holds them in a field and delegates to them.
  *
- * <p>The parts list is required, not empty, and copied, so later changes to the caller's list do not change the kit.
+ * <p>The parts list is required, not empty, and copied, so later changes to the caller's list do not change the kit. A
+ * {@code null} parts list throws {@link NullPointerException}; an empty one throws {@link IllegalArgumentException}.
  */
 public class ToolKit extends Lendable {
     private final List<Tool> parts;

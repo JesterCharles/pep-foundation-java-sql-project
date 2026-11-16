@@ -13,7 +13,9 @@ import java.util.Objects;
  * </pre>
  *
  * <p>Constructor rules (on top of {@link Lendable}'s): category, status and shelf are required; the replacement
- * cost is greater than zero; the shelf looks like {@code A-01} (an upper-case letter, a dash, two digits).
+ * cost is greater than zero; the shelf looks like {@code A-01} (an upper-case letter, a dash, two digits). A
+ * {@code null} required value throws {@link NullPointerException}; any other broken rule throws
+ * {@link IllegalArgumentException}.
  */
 public class Tool extends Lendable {
     private final ToolCategory category;

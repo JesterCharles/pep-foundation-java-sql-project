@@ -32,7 +32,8 @@ constant's values; `Receipts.java` shows a complete example receipt.
 
 1. `git switch main && git pull`, then `git switch -c m3/domain-model`.
 2. Start with `Member`: reject `null` with `NullPointerException` (`Objects.requireNonNull`) and bad values with
-   `IllegalArgumentException`. Fields are `private final` unless they really change.
+   `IllegalArgumentException`. The same rule applies to the constructors of `Tool`, `ToolKit`, `Loan` and
+   `GraceFeePolicy`. Fields are `private final` unless they really change.
 3. `Lendable` is abstract: `Tool` and `ToolKit` extend it and call `super(code, name)` first. A kit holds a list of
    tools; it is not a tool itself.
 4. `FeePolicy` is an interface. `GraceFeePolicy` wraps another policy instead of extending it. `FeePolicies.forTier`

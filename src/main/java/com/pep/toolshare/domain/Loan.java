@@ -9,7 +9,8 @@ import java.util.Objects;
  *
  * <p>Rules checked by the compact constructor: {@code id >= 0} (0 means "not saved yet"); member id, tool code,
  * loan date and due date are required; the due date is not before the loan date; the return date is either
- * {@code null} (still out) or not before the loan date; the fee is not negative.
+ * {@code null} (still out) or not before the loan date; the fee is not negative. A {@code null} required value
+ * throws {@link NullPointerException}; any other broken rule throws {@link IllegalArgumentException}.
  */
 public record Loan(long id, String memberId, String toolCode, LocalDate loanedOn, LocalDate dueOn,
                    LocalDate returnedOn, long feeCents) {
@@ -38,7 +39,10 @@ public record Loan(long id, String memberId, String toolCode, LocalDate loanedOn
         throw new UnsupportedOperationException("TODO LEARNER 3E: daysLate");
     }
 
-    /** A copy of this loan marked returned on {@code on} with {@code fee}. Rejects a loan that is already returned. */
+    /**
+     * A copy of this loan marked returned on {@code on} with {@code fee}. A loan that is already returned throws
+     * {@link IllegalStateException}.
+     */
     public Loan returned(LocalDate on, long fee) {
         // TODO LEARNER 3E
         throw new UnsupportedOperationException("TODO LEARNER 3E: returned");

@@ -35,4 +35,5 @@ step clean verify
 step -Pcompletion test
 step -Pcoverage verify
 step compile exec:java -Dexec.args=help
+step dependency:tree
 echo "Done. Everything is downloaded; without a network connection, run: export MAVEN_ARGS=-o"
