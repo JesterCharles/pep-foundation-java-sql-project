@@ -57,8 +57,8 @@ The check prints PASS or FAIL with test counts for every milestone. Fix the earl
 `target/milestone-check/` and `target/surefire-reports/`.
 
 Every milestone is delivered the same way: work on a branch named `m<N>/<topic>` (for example `m2/lending-basics`),
-commit in small steps, push the branch, merge it into `main`, push `main`, and fill in that week's entry in
-`WORKLOG.md`. The checks read your local Git history, so they work with any remote name or server address.
+commit in small steps (including that week's entry in `WORKLOG.md`), merge it into `main`, and push both `main` and
+the branch. The checks read your local Git history, so they work with any remote name or server address.
 
 ## Time and pace
 

@@ -99,7 +99,8 @@ checkout or checkin, and in at least one test call `JdbcLoanRepository` and then
    configuration, and your tests.
 3. In `./scripts/sql.sh`, run `EXPLAIN SELECT * FROM loans WHERE member_id = 'M-0001' AND returned_on IS NULL;` and
    note in `Query plan:` whether your index is used.
-4. Commit in small steps and push the branch. Fill in `### M5` in `WORKLOG.md`, commit, merge into `main`, push.
+4. Commit in small steps and push the branch. Fill in `### M5` in `WORKLOG.md`, commit, merge into `main`, then
+   push both: `git push` on `main` and `git push origin m5/database`.
 
 ## Check
 

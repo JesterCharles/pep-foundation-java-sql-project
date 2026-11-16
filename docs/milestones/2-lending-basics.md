@@ -39,6 +39,7 @@ Each method's comment states its exact rule and examples. Read the matching test
 git switch main
 git merge m2/lending-basics
 git push
+git push origin m2/lending-basics
 ```
 
 ## Check

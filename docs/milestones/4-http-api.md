@@ -102,7 +102,8 @@ one branch of `LendingService` your tests do not cover yet.
 1. `git switch main && git pull`, then `git switch -c m4/http-api`.
 2. Work in the table order: exceptions, settings, repositories, service, routes, then your tests.
    `mvn -q -Pcompletion test -Dtest='LendingServiceCompletionTest'` runs one check class.
-3. Commit in small steps and push the branch. Fill in `### M4` in `WORKLOG.md`, commit, merge into `main`, push.
+3. Commit in small steps and push the branch. Fill in `### M4` in `WORKLOG.md`, commit, merge into `main`, then
+   push both: `git push` on `main` and `git push origin m4/http-api`.
 
 ## Check
 

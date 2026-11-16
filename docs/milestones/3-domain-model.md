@@ -41,7 +41,8 @@ constant's values; `Receipts.java` shows a complete example receipt.
 5. Use `==` for enum constants and `equals` for strings; know why.
 6. Run `mvn -q -Pcompletion test -Dtest='MemberCompletionTest,ToolCatalogCompletionTest,LoanAndFeesCompletionTest'`
    while you work. `mvn dependency:tree` shows which libraries Maven resolved for the project.
-7. Commit in small steps and push the branch. Fill in `### M3` in `WORKLOG.md`, commit, merge into `main`, push.
+7. Commit in small steps and push the branch. Fill in `### M3` in `WORKLOG.md`, commit, merge into `main`, then
+   push both: `git push` on `main` and `git push origin m3/domain-model`.
 
 ## Check
 
