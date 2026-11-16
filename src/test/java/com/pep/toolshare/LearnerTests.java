@@ -1,11 +1,11 @@
 package com.pep.toolshare;
 
-import com.pep.toolshare.config.SampleData;
 import jdk.jfr.Recording;
 import jdk.jfr.consumer.RecordedEvent;
 import jdk.jfr.consumer.RecordedFrame;
 import jdk.jfr.consumer.RecordingFile;
 import org.junit.platform.engine.TestExecutionResult;
+import org.junit.platform.engine.support.descriptor.MethodSource;
 import org.junit.platform.launcher.Launcher;
 import org.junit.platform.launcher.LauncherDiscoveryRequest;
 import org.junit.platform.launcher.TestExecutionListener;
@@ -26,6 +26,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +48,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public final class LearnerTests {
     private static final String LENDING_EXCEPTION = "com.pep.toolshare.lending.LendingException";
+    private static final List<String> SAMPLE_DATA_STORES = List.of("com.pep.toolshare.lending.InMemoryMemberRepository",
+            "com.pep.toolshare.lending.InMemoryToolRepository", "com.pep.toolshare.lending.InMemoryLoanRepository");
+    private static final List<String> PLATFORM = List.of("java.", "jdk.", "sun.");
     private static final Map<String, Run> RUNS = new ConcurrentHashMap<>();
     /** How long one run of your test class may take. */
     static final Duration RUN_LIMIT = Duration.ofSeconds(10);
@@ -103,10 +107,11 @@ public final class LearnerTests {
         Worker worker = new Worker(type, thrower);
         int createdBefore = TestDatabase.created();
         int readsBefore = TestDatabase.reads();
-        List<RecordedEvent> exceptions;
+        List<RecordedEvent> events;
         boolean finished;
         try (Recording recording = new Recording()) {
             recording.enable("jdk.JavaExceptionThrow").withStackTrace();
+            recording.enable("jdk.MethodTrace").with("filter", String.join(";", SAMPLE_DATA_STORES)).withStackTrace();
             recording.start();
             // The tests run on their own daemon thread, so one that never ends can be left behind when the limit is up.
             Thread thread = Thread.ofPlatform().daemon().name("learner-tests " + type.getSimpleName())
@@ -125,7 +130,7 @@ public final class LearnerTests {
                 thread.interrupt();
                 return new Run(type.getSimpleName(), false, 0, 0, 0, "", false, 0, 0, 0, 0, 0, List.of());
             }
-            exceptions = read(recording);
+            events = read(recording);
         }
         if (worker.error != null) {
             throw new AssertionError("Could not run " + type.getSimpleName() + ": " + worker.error, worker.error);
@@ -136,8 +141,8 @@ public final class LearnerTests {
         PerTest perTest = worker.perTest;
         return new Run(type.getSimpleName(), true, summary.getTestsFoundCount(), summary.getTestsSucceededCount(),
                 summary.getTotalFailureCount(), failures.toString(), worker.mockito != null, perTest.withMocks,
-                perTest.fakes, TestDatabase.created() - createdBefore, TestDatabase.reads() - readsBefore,
-                perTest.readBacks, refusalsHandled(exceptions, className, thrower));
+                perTest.fakes(storeCallers(events, thrower)), TestDatabase.created() - createdBefore,
+                TestDatabase.reads() - readsBefore, perTest.readBacks, refusalsHandled(events, className, thrower));
     }
 
     /**
@@ -239,26 +244,55 @@ public final class LearnerTests {
     }
 
     /**
+     * Every method on the stack of a call that {@code thrower} made on the in-memory repositories: the first frame
+     * above them that is not Java's own code, so a method reference such as {@code .map(tools::findByCode)} is
+     * credited to the class that wrote it. Each method is named {@code Class#method}.
+     */
+    private static Set<String> storeCallers(List<RecordedEvent> events, String thrower) {
+        Set<String> methods = new HashSet<>();
+        for (RecordedEvent event : events) {
+            if (!event.getEventType().getName().equals("jdk.MethodTrace") || event.getStackTrace() == null) {
+                continue;
+            }
+            List<RecordedFrame> frames = event.getStackTrace().getFrames();
+            String caller = frames.stream().map(frame -> frame.getMethod().getType().getName())
+                    .filter(name -> SAMPLE_DATA_STORES.stream().noneMatch(store -> owns(store, name))
+                            && PLATFORM.stream().noneMatch(name::startsWith))
+                    .findFirst().orElse("");
+            if (owns(thrower, caller)) {
+                for (RecordedFrame frame : frames) {
+                    methods.add(frame.getMethod().getType().getName() + "#" + frame.getMethod().getName());
+                }
+            }
+        }
+        return methods;
+    }
+
+    /**
      * Per passing test: did the code under test call a Mockito mock; did LendingService run on the in-memory sample
      * data while no mock was called (a fake); and did JdbcLoanRepository use a test database that the test then read
      * back? Mocks created but never called, for example in a field, do not count, and neither do calls your test makes
-     * on a mock directly.
+     * on a mock directly. A fake counts only for the test method whose own frame is on the stack of the service's
+     * call, so work done once in {@code @BeforeAll} is not credited to a test.
      */
     private static final class PerTest implements TestExecutionListener {
         private final MockitoProbe mockito;
         private final String thrower;
         private final Set<Object> invocationsSeen = Collections.newSetFromMap(new IdentityHashMap<>());
-        private int serviceCallsSeen;
+        private final List<String> passedWithoutMocks = new ArrayList<>();
         private int repositoryOpensSeen = TestDatabase.repositoryOpens();
         private int readsSeen = TestDatabase.reads();
         private int withMocks;
-        private int fakes;
         private int readBacks;
 
         PerTest(MockitoProbe mockito, String thrower) {
             this.mockito = mockito;
             this.thrower = thrower;
-            this.serviceCallsSeen = SampleData.callsFrom(thrower);
+        }
+
+        /** Passing tests with no mock called whose own method made the code under test use the in-memory stores. */
+        int fakes(Set<String> storeCallers) {
+            return (int) passedWithoutMocks.stream().filter(storeCallers::contains).count();
         }
 
         @Override
@@ -267,7 +301,6 @@ public final class LearnerTests {
                 if (mockito != null) {
                     invocationsSeen.addAll(mockito.invocations());
                 }
-                serviceCallsSeen = SampleData.callsFrom(thrower);
                 repositoryOpensSeen = TestDatabase.repositoryOpens();
                 readsSeen = TestDatabase.reads();
             }
@@ -292,34 +325,40 @@ public final class LearnerTests {
                     }
                 }
             }
-            int serviceCalls = SampleData.callsFrom(thrower);
             int repositoryOpens = TestDatabase.repositoryOpens();
             int reads = TestDatabase.reads();
             if (result.getStatus() == TestExecutionResult.Status.SUCCESSFUL) {
                 if (calls > 0) {
                     withMocks++;
-                } else if (allCalls == 0 && serviceCalls > serviceCallsSeen) {
-                    fakes++;
+                } else if (allCalls == 0 && test.getSource().orElse(null) instanceof MethodSource method) {
+                    passedWithoutMocks.add(method.getClassName() + "#" + method.getMethodName());
                 }
                 if (repositoryOpens > repositoryOpensSeen && reads > readsSeen) {
                     readBacks++;
                 }
             }
-            serviceCallsSeen = serviceCalls;
             repositoryOpensSeen = repositoryOpens;
             readsSeen = reads;
         }
     }
 
     /**
-     * Listens to Mockito while your tests run. Mockito is your own test dependency (TODO 4F), so it is reached by
-     * reflection: this file must also compile before you add it.
+     * Listens to Mockito while your tests run: notes each mock created and, for each call made on a mock, the class that
+     * made it. Mockito is your own test dependency (TODO 4F), so it is reached by reflection: this file must also
+     * compile before you add it.
      */
     private static final class MockitoProbe implements InvocationHandler {
+        private static final StackWalker WALKER = StackWalker.getInstance(
+                Set.of(StackWalker.Option.RETAIN_CLASS_REFERENCE, StackWalker.Option.SHOW_HIDDEN_FRAMES));
+        private static final List<String> MOCKITO = List.of("org.mockito.", "net.bytebuddy.");
         private final List<Object> mocks = new ArrayList<>();
+        private final Map<Object, String> callers = Collections.synchronizedMap(new IdentityHashMap<>());
         private Object framework;
         private Object listener;
         private Method removeListener;
+        private Method invocationListeners;
+        private Method reportedInvocation;
+        private Method invokedMock;
 
         static MockitoProbe attach() {
             try {
@@ -329,7 +368,13 @@ public final class LearnerTests {
                 MockitoProbe probe = new MockitoProbe();
                 probe.framework = mockito.getMethod("framework").invoke(null);
                 probe.listener = Proxy.newProxyInstance(LearnerTests.class.getClassLoader(), new Class<?>[] {
-                        Class.forName("org.mockito.listeners.MockCreationListener")}, probe);
+                        Class.forName("org.mockito.listeners.MockCreationListener"),
+                        Class.forName("org.mockito.listeners.InvocationListener")}, probe);
+                probe.invocationListeners = Class.forName("org.mockito.mock.MockCreationSettings")
+                        .getMethod("getInvocationListeners");
+                probe.reportedInvocation = Class.forName("org.mockito.listeners.MethodInvocationReport")
+                        .getMethod("getInvocation");
+                probe.invokedMock = Class.forName("org.mockito.invocation.InvocationOnMock").getMethod("getMock");
                 frameworkType.getMethod("addListener", listenerType).invoke(probe.framework, probe.listener);
                 probe.removeListener = frameworkType.getMethod("removeListener", listenerType);
                 return probe;
@@ -364,37 +409,36 @@ public final class LearnerTests {
             return all;
         }
 
-        /**
-         * Whether Mockito records {@code caller} as the class that made {@code invocation}. A call passed through
-         * Java's own code (for example a method reference given to {@code Optional.map}) is not credited, because that
-         * frame cannot show who wrote it.
-         */
+        /** Whether {@code caller} (with its nested classes, lambdas and method references) made {@code invocation}. */
         boolean madeBy(Object invocation, String caller) {
-            try {
-                Method location = Class.forName("org.mockito.invocation.DescribedInvocation").getMethod("getLocation");
-                return owns(caller, callerClass(location.invoke(invocation).toString()));
-            } catch (ReflectiveOperationException exception) {
-                throw new AssertionError("Could not read a Mockito invocation: " + exception, exception);
-            }
+            return owns(caller, callers.getOrDefault(invocation, ""));
         }
 
-        /** The class in a Mockito location such as {@code -> at com.example.Type.method(Type.java:12)}. */
-        private static String callerClass(String location) {
-            String frame = location.strip();
-            int at = frame.indexOf("at ");
-            int paren = frame.indexOf('(');
-            if (at < 0 || paren < at) {
-                return "";
-            }
-            String method = frame.substring(at + 3, paren);
-            int dot = method.lastIndexOf('.');
-            return dot < 0 ? "" : method.substring(0, dot);
+        /**
+         * Notes the class that called the mock: the first frame that is not Java's own code, Mockito, this listener or
+         * the mock itself, so a method reference such as {@code .map(members::findById)} is credited to the class that
+         * wrote it.
+         */
+        private void called(Object report) throws ReflectiveOperationException {
+            Object invocation = reportedInvocation.invoke(report);
+            Object mock = invokedMock.invoke(invocation);
+            String caller = WALKER.walk(frames -> frames.map(StackWalker.StackFrame::getDeclaringClass)
+                    .filter(type -> !type.isInstance(mock) && !owns(LearnerTests.class.getName(), type.getName())
+                            && PLATFORM.stream().noneMatch(type.getName()::startsWith)
+                            && MOCKITO.stream().noneMatch(type.getName()::startsWith))
+                    .findFirst()).map(Class::getName).orElse("");
+            callers.put(invocation, caller);
         }
 
+        @SuppressWarnings("unchecked")
         @Override
-        public Object invoke(Object proxy, Method method, Object[] args) {
+        public Object invoke(Object proxy, Method method, Object[] args) throws ReflectiveOperationException {
             switch (method.getName()) {
-                case "onMockCreated" -> mocks.add(args[0]);
+                case "onMockCreated" -> {
+                    mocks.add(args[0]);
+                    ((List<Object>) invocationListeners.invoke(args[1])).add(proxy);
+                }
+                case "reportInvocation" -> called(args[0]);
                 case "hashCode" -> {
                     return System.identityHashCode(proxy);
                 }

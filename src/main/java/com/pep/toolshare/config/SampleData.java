@@ -11,29 +11,13 @@ import com.pep.toolshare.lending.InMemoryMemberRepository;
 import com.pep.toolshare.lending.InMemoryToolRepository;
 
 import java.time.LocalDate;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * The synthetic Lantern Tool Library data held in memory. It matches {@code src/main/resources/db/seed.sql} row for
  * row, so the in-memory and database stores start from the same state.
  */
 public final class SampleData {
-    private static final AtomicInteger IN_MEMORY_CREATED = new AtomicInteger();
-
     private SampleData() {
-    }
-
-    /** How many times {@link #inMemory()} has finished building the stores; the completion checks read it. */
-    public static int inMemoryCreated() {
-        return IN_MEMORY_CREATED.get();
-    }
-
-    /**
-     * How many calls code in {@code className} (with its nested classes, lambdas and method references) has made on
-     * stores from {@link #inMemory()}; the completion checks read it.
-     */
-    public static int callsFrom(String className) {
-        return ServiceCalls.callsFrom(className);
     }
 
     public static Stores inMemory() {
@@ -80,9 +64,7 @@ public final class SampleData {
         loan(loans, 13, "M-0003", "LT-1010-2", "2026-09-12", "2026-09-19", "2026-09-21", 150);
         loan(loans, 14, "M-0002", "LT-1012-4", "2026-09-15", "2026-09-29", "2026-09-29", 0);
 
-        Stores stores = ServiceCalls.wrap(new Stores(members, tools, loans, null));
-        IN_MEMORY_CREATED.incrementAndGet();
-        return stores;
+        return new Stores(members, tools, loans, null);
     }
 
     private static void tool(InMemoryToolRepository tools, String code, String name, ToolCategory category,
