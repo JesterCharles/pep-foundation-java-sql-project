@@ -58,7 +58,12 @@ class SecretHygieneCompletionTest {
             }
             int equals = trimmed.indexOf('=');
             assertTrue(equals > 0, ".env.example lines look like NAME=value: " + trimmed);
-            settings.put(trimmed.substring(0, equals).strip(), trimmed.substring(equals + 1).strip());
+            String value = trimmed.substring(equals + 1).strip();
+            if (value.length() >= 2 && (value.charAt(0) == '\'' || value.charAt(0) == '"')
+                    && value.charAt(value.length() - 1) == value.charAt(0)) {
+                value = value.substring(1, value.length() - 1);
+            }
+            settings.put(trimmed.substring(0, equals).strip(), value);
         }
         return settings;
     }

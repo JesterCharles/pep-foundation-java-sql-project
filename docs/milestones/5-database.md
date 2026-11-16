@@ -20,7 +20,7 @@ The database is an embedded H2 database in PostgreSQL mode: it runs inside the J
 | 5E | `jdbc/SqlReports.java` | Seven reports, each one SQL query. |
 | 5F | `config/AppConfig.java`, `config/StoreFactory.java` | Choose memory or database from `LANTERN_STORE`. |
 | 5G | `src/test/java/com/pep/toolshare/learner/JdbcLoanRepositoryTest.java` | Your own database tests. |
-| 5H | `.env.example` | Add `LANTERN_STORE=memory` and `LANTERN_DB_URL=` with the default URL. |
+| 5H | `.env.example` | Add `LANTERN_STORE=memory` and `LANTERN_DB_URL=` with the default URL in single quotes (`LANTERN_DB_URL='jdbc:h2:...'`): unquoted, each `;` ends the line when `.env` is sourced. |
 | 5W | `WORKLOG.md` | Your `### M5` entry, including `Query plan:`. |
 
 Java paths are under `src/main/java/com/pep/toolshare/`. Checks: `SchemaCompletionTest`,
