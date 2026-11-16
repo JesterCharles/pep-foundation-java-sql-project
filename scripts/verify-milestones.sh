@@ -111,7 +111,7 @@ check() {
     echo "health (mvn -q clean verify): $(word "$health_ok")"
     for m in $(rows | cut -f1); do
         if [[ ${passed[m]} -eq 2 ]]; then
-            echo "milestone $m $(field "$m" 2): NOT RUN (the test run was stopped before these checks)"
+            echo "milestone $m $(field "$m" 2): NOT RUN (the test run was stopped before all of these checks ran)"
         else
             echo "milestone $m $(field "$m" 2): $(word "${passed[m]}") (${totals[m]})"
         fi
@@ -119,7 +119,7 @@ check() {
     if [[ $stopped -eq 1 ]]; then
         echo "The test run was stopped at its time limit because some code never finished: look for a loop that" \
             "never ends in your latest change."
-        slow=$(grep -l 'timed out after' "$reports"/*.txt 2>/dev/null | sed 's|.*/||; s|\.txt$||' | tr '\n' ' ')
+        slow=$(grep -l 'timed out after' "$reports"/*.txt 2>/dev/null | sed 's|.*/||; s|\.txt$||' | tr '\n' ' ') || true
         [[ -z $slow ]] || echo "Checks with a test that ran too long: $slow"
     fi
 }
