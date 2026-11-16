@@ -7,9 +7,13 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -100,34 +104,64 @@ public final class LearnerRepo {
     }
 
     /**
-     * The starting point you received: the newest commit on main whose Milestone 1 files are still untouched (the
-     * script still says its summary is not written, WORKLOG.md has no name, .env.example lists no LANTERN_PORT and
-     * .gitignore does not ignore .env). It depends only on file contents, so any history that came with the starter is
-     * left out however it was imported.
+     * The starting point you received. A commit is an untouched starter when its Milestone 1 files are as supplied:
+     * the script still says its summary is not written, WORKLOG.md has no name, .env.example lists no LANTERN_PORT and
+     * .gitignore does not ignore .env. Your first commits that change a Milestone 1 file have an untouched parent; the
+     * starting point is the common ancestor of those parents, so everything you commit after it counts, whichever files
+     * it changes. It depends only on file contents, so any history that came with the starter is left out however it
+     * was imported. With no Milestone 1 change yet, the starting point is main itself.
      */
     public static String baseline() {
         return baseline(ROOT);
     }
 
     static String baseline(Path repository) {
-        for (String commit : git(repository, "rev-list", MAIN).lines()) {
-            if (untouchedStarter(repository, commit)) {
-                return commit;
+        String tip = git(repository, "rev-parse", MAIN).out().strip();
+        return BASELINES.computeIfAbsent(repository.toAbsolutePath() + " " + tip, key -> findBaseline(repository));
+    }
+
+    private static final Map<String, String> BASELINES = new ConcurrentHashMap<>();
+
+    private static String findBaseline(Path repository) {
+        List<String> rows = git(repository, "rev-list", "--parents", MAIN).lines();
+        List<String> commits = rows.stream().map(row -> row.split(" ")[0]).toList();
+        Set<String> untouched = matching(repository, commits, "-F", "summary not written yet", "bin/loan-summary.sh");
+        untouched.retainAll(matching(repository, commits, "-F", "Name: TODO LEARNER 1D", "WORKLOG.md"));
+        untouched.removeAll(matching(repository, commits, "-E", "^LANTERN_PORT=", ".env.example"));
+        untouched.removeAll(matching(repository, commits, "-E", "^[^#]*\\.env", ".gitignore"));
+        Set<String> starts = new LinkedHashSet<>();
+        for (String row : rows) {
+            String[] ids = row.split(" ");
+            if (!untouched.contains(ids[0])) {
+                Arrays.stream(ids).skip(1).filter(untouched::contains).forEach(starts::add);
             }
         }
-        throw new AssertionError("main has no commit with the untouched starter files, so your own commits cannot be "
-                + "told apart from the starter. Ask your trainer.");
+        if (starts.isEmpty()) {
+            assertTrue(!commits.isEmpty() && untouched.contains(commits.get(0)), "main has no commit with the "
+                    + "untouched starter files, so your own commits cannot be told apart from the starter. Ask your "
+                    + "trainer.");
+            return commits.get(0);
+        }
+        if (starts.size() == 1) {
+            return starts.iterator().next();
+        }
+        List<String> args = new ArrayList<>(List.of("merge-base", "--octopus"));
+        args.addAll(starts);
+        return git(repository, args.toArray(String[]::new)).out().strip();
     }
 
-    private static boolean untouchedStarter(Path repository, String commit) {
-        return found(repository, commit, "-F", "summary not written yet", "bin/loan-summary.sh")
-                && found(repository, commit, "-F", "Name: TODO LEARNER 1D", "WORKLOG.md")
-                && !found(repository, commit, "-E", "^LANTERN_PORT=", ".env.example")
-                && !found(repository, commit, "-E", "^[^#]*\\.env", ".gitignore");
-    }
-
-    private static boolean found(Path repository, String commit, String mode, String pattern, String file) {
-        return git(repository, "grep", "-q", mode, "-e", pattern, commit, "--", file).exitCode() == 0;
+    /** The commits among {@code commits} whose {@code file} has a line matching {@code pattern}. */
+    private static Set<String> matching(Path repository, List<String> commits, String mode, String pattern,
+                                        String file) {
+        List<String> args = new ArrayList<>(List.of("grep", "-l", mode, "-e", pattern));
+        args.addAll(commits);
+        args.add("--");
+        args.add(file);
+        Set<String> found = new HashSet<>();
+        for (String line : git(repository, args.toArray(String[]::new)).lines()) {
+            found.add(line.substring(0, line.indexOf(':')));
+        }
+        return found;
     }
 
     /** Commits on main made after the starting point, newest first. */
