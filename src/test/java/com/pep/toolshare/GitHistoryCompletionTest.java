@@ -49,10 +49,11 @@ class GitHistoryCompletionTest {
         LearnerRepo.requireRepository();
         Set<String> ownCommits = new HashSet<>(LearnerRepo.learnerCommitsOnMain(true));
         String log = LearnerRepo.git("log", "--format=%B", LearnerRepo.baseline() + ".." + LearnerRepo.MAIN).out();
-        Matcher reverted = Pattern.compile("This reverts commit ([0-9a-f]{40})").matcher(log);
+        Matcher reverted = Pattern.compile("This reverts commit ([0-9a-f]{7,40})\\b").matcher(log);
         boolean found = false;
         while (reverted.find()) {
-            found = found || ownCommits.contains(reverted.group(1));
+            String hash = reverted.group(1);
+            found = found || ownCommits.stream().anyMatch(commit -> commit.startsWith(hash));
         }
         assertTrue(found, "main has no commit made with git revert that undoes one of your own commits");
     }

@@ -33,7 +33,10 @@ public final class LendingMath {
         throw new UnsupportedOperationException("TODO LEARNER 2A: membershipTier");
     }
 
-    /** Formats cents as dollars, for example {@code 123456} becomes {@code $1,234.56} and {@code 5} becomes {@code $0.05}. */
+    /**
+     * Formats cents as dollars, for example {@code 123456} becomes {@code $1,234.56} and {@code 5} becomes
+     * {@code $0.05}. A negative amount gets a leading minus: {@code -225} becomes {@code -$2.25}.
+     */
     public static String formatCents(long cents) {
         // TODO LEARNER 2B: build the dollar text with division, remainder and a loop.
         throw new UnsupportedOperationException("TODO LEARNER 2B: formatCents");

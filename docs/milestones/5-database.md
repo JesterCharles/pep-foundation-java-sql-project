@@ -75,7 +75,7 @@ a CTE with `ROW_NUMBER() OVER (PARTITION BY ...)`. `runQuery` is supplied.
 
 | Variable | Rule | Default |
 | --- | --- | --- |
-| `LANTERN_STORE` | `memory` or `jdbc` (any letter case); otherwise `IllegalArgumentException` naming the variable | `memory` |
+| `LANTERN_STORE` | `memory` or `jdbc` (any letter case, kept stripped and lower-case, so `" JDBC "` is stored as `jdbc`); otherwise `IllegalArgumentException` naming the variable | `memory` |
 | `LANTERN_DB_URL` | must start with `jdbc:h2:`; otherwise `IllegalArgumentException` naming the variable | `AppConfig.DEFAULT_DATABASE_URL` |
 
 `StoreFactory.open` returns the JDBC repositories plus `SqlReports` for `jdbc`, creating the tables and sample rows

@@ -111,6 +111,8 @@ public final class App {
                 row.categoryCode(), row.toolCode(), row.toolName(), row.loanCount()));
         List<MemberRef> idle = reports.membersWithoutLoans();
         System.out.println("Members without loans: " + idle.size());
+        idle.forEach(row -> System.out.printf("- %s %s%n", row.id(), row.fullName()));
+        System.out.println("Members with late fees:");
         reports.memberBalances().stream().filter(row -> row.feeCents() > 0).forEach(row -> System.out.printf(
                 "- balance %s: %s%n", row.memberId(), LendingMath.formatCents(row.feeCents())));
     }

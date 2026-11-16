@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  * origin/main) contains your commits, which is true after a successful git push.
  */
 public final class LearnerRepo {
+    private static final String MARKER = "TODO " + "LEARNER ";
     public static final Path ROOT = Path.of("").toAbsolutePath();
     public static final String MAIN = "main";
 
@@ -126,7 +127,7 @@ public final class LearnerRepo {
         List<String> rows = git(repository, "rev-list", "--parents", MAIN).lines();
         List<String> commits = rows.stream().map(row -> row.split(" ")[0]).toList();
         Set<String> untouched = matching(repository, commits, "-F", "summary not written yet", "bin/loan-summary.sh");
-        untouched.retainAll(matching(repository, commits, "-F", "Name: TODO LEARNER 1D", "WORKLOG.md"));
+        untouched.retainAll(matching(repository, commits, "-F", "Name: " + MARKER + "1D", "WORKLOG.md"));
         untouched.removeAll(matching(repository, commits, "-E", "^LANTERN_PORT=", ".env.example"));
         untouched.removeAll(matching(repository, commits, "-E", "^[^#]*\\.env", ".gitignore"));
         Set<String> starts = new LinkedHashSet<>();

@@ -40,7 +40,7 @@ Values are stripped and a blank value counts as missing. `toString()` shows `adm
 | --- | --- | --- |
 | any | blank member id or tool code; tool code that is not valid after `normalizeToolCode`; unknown category | `InvalidRequestException` |
 | any | unknown member, tool or loan | `NotFoundException` |
-| checkout | member not active; tool not `AVAILABLE`; member already has 3 open loans | `RuleViolationException` |
+| checkout | member not active; tool not `AVAILABLE`; member already has 3 open loans (the message names the limit, 3) | `RuleViolationException` |
 | checkout | due date is today plus the category's maximum loan days | |
 | checkin | loan already returned | `RuleViolationException` |
 | checkin | fee from `FeePolicies.forTier(member tier)`; a damaged tool goes to `IN_REPAIR`, otherwise `AVAILABLE` | |
@@ -63,7 +63,7 @@ Every error response is JSON `{"error": "..."}`: `InvalidRequestException` 400, 
 | `POST /loans` | `{"memberId":"M-0006","toolCode":"LT-1007-8"}` | 201, the new loan |
 | `POST /loans/{id}/return` | `{"damaged":true}` (optional) | 200, the closed loan |
 | `GET /loans/{id}/receipt` | | 200, plain-text receipt |
-| `POST /tools/{code}/retire` | header `X-Admin-Token` | 204; 403 when no token is configured, 401 when the header is missing or wrong |
+| `POST /tools/{code}/retire` | header `X-Admin-Token` | 204; 403 when no token is configured (checked first, whatever the header says), otherwise 401 when the header is missing or wrong |
 
 A missing or malformed JSON body is a 400, and so is a loan id that is not a number. JSON shapes are the records
 `ToolView`, `LoanView` and `ErrorBody` in the `api` package.

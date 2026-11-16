@@ -26,7 +26,10 @@ public final class DatabaseManager {
         }
     }
 
-    /** Drops everything, then runs the schema and the seed script. */
+    /**
+     * Drops everything, then runs the schema and the seed script. If a script fails, the database is left empty, so the
+     * next start creates it again.
+     */
     public static void reset(ConnectionFactory connections) {
         try (Connection connection = connections.open()) {
             connection.setAutoCommit(false);
@@ -37,6 +40,7 @@ public final class DatabaseManager {
                 connection.commit();
             } catch (SQLException exception) {
                 rollback(connection, exception);
+                dropAll(connection, exception);
                 throw new StorageException("Could not reset the database: " + exception.getMessage(), exception);
             }
         } catch (SQLException exception) {
@@ -93,6 +97,15 @@ public final class DatabaseManager {
     private static void execute(Connection connection, String sql) throws SQLException {
         try (Statement statement = connection.createStatement()) {
             statement.execute(sql);
+        }
+    }
+
+    private static void dropAll(Connection connection, SQLException original) {
+        try {
+            execute(connection, "DROP ALL OBJECTS");
+            connection.commit();
+        } catch (SQLException dropFailure) {
+            original.addSuppressed(dropFailure);
         }
     }
 

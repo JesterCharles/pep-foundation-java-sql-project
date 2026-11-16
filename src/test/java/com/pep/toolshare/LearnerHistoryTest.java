@@ -18,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * however long, never counts as your work, and every commit you make after your first Milestone 1 change does.
  */
 class LearnerHistoryTest {
+    private static final String MARKER = "TODO " + "LEARNER ";
     @Test
     void starterHistoryAloneIsNoLearnerWork(@TempDir Path repository) throws IOException {
         importStarterWithHistory(repository);
@@ -46,16 +47,16 @@ class LearnerHistoryTest {
         mine.add(commit(repository, "Ignore local settings"));
         git(repository, "switch", "-q", LearnerRepo.MAIN);
         git(repository, "switch", "-q", "-c", "m1/notes-a");
-        write(repository, "WORKLOG.md", WORKLOG.replace("Blockers: TODO LEARNER 1W", "Blockers: none at all today"));
+        write(repository, "WORKLOG.md", WORKLOG.replace(BLOCKERS, "Blockers: none at all today"));
         mine.add(commit(repository, "Note no blockers"));
         git(repository, "switch", "-q", "-c", "m1/notes-b", LearnerRepo.MAIN);
-        write(repository, "WORKLOG.md", WORKLOG.replace("Blockers: TODO LEARNER 1W", "Blockers: waiting on Java"));
+        write(repository, "WORKLOG.md", WORKLOG.replace(BLOCKERS, "Blockers: waiting on Java"));
         mine.add(commit(repository, "Note a blocker"));
         git(repository, "switch", "-q", LearnerRepo.MAIN);
         identity(repository, "merge", "-q", "m1/notes-a");
         assertEquals(1, asLearner(repository, "merge", "-q", "m1/notes-b").exitCode(),
                 "the second merge must conflict");
-        write(repository, "WORKLOG.md", WORKLOG.replace("Blockers: TODO LEARNER 1W", "Blockers: waiting on Java"));
+        write(repository, "WORKLOG.md", WORKLOG.replace(BLOCKERS, "Blockers: waiting on Java"));
         mine.add(commit(repository, "Resolve the blockers conflict"));
         write(repository, "README.md", "A deliberate mistake\n");
         mine.add(commit(repository, "Make a mistake"));
@@ -77,8 +78,9 @@ class LearnerHistoryTest {
         assertEquals(mine, LearnerRepo.learnerCommitsOnMain(repository, false));
     }
 
-    private static final String WORKLOG = "# Work log\n\nName: TODO LEARNER 1D\nStory: TODO LEARNER 1D\n\n### M1\n"
-            + "Blockers: TODO LEARNER 1W\n";
+    private static final String BLOCKERS = "Blockers: " + MARKER + "1W";
+    private static final String WORKLOG = "# Work log\n\nName: " + MARKER + "1D\nStory: " + MARKER + "1D\n\n### M1\n"
+            + BLOCKERS + "\n";
 
     /** An older project, then the starter, then later maintenance commits that keep the starter files untouched. */
     private static void importStarterWithHistory(Path repository) throws IOException {
@@ -86,10 +88,10 @@ class LearnerHistoryTest {
         write(repository, "README.md", "An older project\n");
         commit(repository, "Older project");
         write(repository, "bin/loan-summary.sh", "#!/usr/bin/env bash\n"
-                + "echo \"TODO LEARNER 1C: summary not written yet\" >&2\nexit 1\n");
-        write(repository, "WORKLOG.md", "# Work log\n\nName: TODO LEARNER 1D\n");
-        write(repository, ".env.example", "# TODO LEARNER 1B: list LANTERN_PORT here.\n");
-        write(repository, ".gitignore", "target/\n# TODO LEARNER 1A: ignore the local .env file.\n");
+                + "echo \"" + MARKER + "1C: summary not written yet\" >&2\nexit 1\n");
+        write(repository, "WORKLOG.md", "# Work log\n\nName: " + MARKER + "1D\n");
+        write(repository, ".env.example", "# " + MARKER + "1B: list LANTERN_PORT here.\n");
+        write(repository, ".gitignore", "target/\n# " + MARKER + "1A: ignore the local .env file.\n");
         commit(repository, "Starter");
         write(repository, "docs/guide.md", "Guide\n");
         commit(repository, "Reference fix to the guide");
