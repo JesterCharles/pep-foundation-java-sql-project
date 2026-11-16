@@ -69,7 +69,8 @@ with their rows.
    broke.
 3. In your work log, answer `SQL or stream:` (one report you would compute in SQL and one in a stream, and why),
    `Big-O:` (the cost of `WaitList.join` and of `positionOf`), and `Walkthrough:` (the order you will demo).
-4. Commit in small steps and push the branch. Merge into `main` and push. Remove every `TODO LEARNER` marker.
+4. Remove every `TODO LEARNER` marker (in every milestone's files), commit in small steps and push the branch. Merge
+   into `main`, then push both: `git push` on `main` and `git push origin m6/final-delivery`.
 
 ## Check
 
