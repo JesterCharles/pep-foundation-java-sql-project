@@ -77,5 +77,5 @@ with their rows.
 ./scripts/verify-milestones.sh 6
 ```
 
-It runs every check, then resets a separate database under `target/`, prints the report for 2026-10-15, and
-confirms that no `TODO LEARNER` marker is left.
+It runs every check. When they all pass, it resets a separate database under `target/`, prints the report for
+2026-10-15, and confirms that no `TODO LEARNER` marker is left.

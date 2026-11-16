@@ -61,19 +61,23 @@ passed=()
 totals=()
 health_ok=0
 final_ok=0
+final_ran=0
+stopped=0
 
 check() {
     # check <final-run:0|1> <last milestone for the final run>
-    local final=$1 upto=$2 m class report suite t f e s mt mf me ms ok
+    local final=$1 upto=$2 m class report suite t f e s mt mf me ms ok missing slow
     set +e
     mvn -q clean verify >"$work/health.log" 2>&1 && health_ok=1
     mvn -q -Pcompletion test >"$work/completion.log" 2>&1
     set -e
+    # Maven stops the whole test run when it goes over its time limit; the checks it had not reached have no report.
+    if grep -q 'There was a timeout in the fork' "$work/health.log" "$work/completion.log"; then stopped=1; fi
     for m in $(rows | cut -f1); do
-        ok=1 mt=0 mf=0 me=0 ms=0
+        ok=1 mt=0 mf=0 me=0 ms=0 missing=0
         for class in $(field "$m" 7 | tr ',' ' '); do
             report="$reports/TEST-$test_package.$class.xml"
-            if [[ ! -f $report ]]; then ok=0; continue; fi
+            if [[ ! -f $report ]]; then ok=0; missing=1; continue; fi
             suite=$(grep -o '<testsuite [^>]*>' "$report" | head -1)
             t=$(attr "$suite" tests) f=$(attr "$suite" failures) e=$(attr "$suite" errors) s=$(attr "$suite" skipped)
             mt=$((mt + ${t:-0})) mf=$((mf + ${f:-0})) me=$((me + ${e:-0})) ms=$((ms + ${s:-0}))
@@ -81,8 +85,14 @@ check() {
         [[ $mt -gt 0 && $mf -eq 0 && $me -eq 0 && $ms -eq 0 ]] || ok=0
         passed[m]=$ok
         totals[m]="tests $mt, failures $mf, errors $me, skipped $ms"
+        [[ $stopped -eq 1 && $missing -eq 1 ]] && passed[m]=2
     done
-    if [[ $final -eq 1 ]]; then
+    local all_passed=1
+    for m in $(rows | cut -f1); do
+        [[ ${passed[m]} -eq 1 ]] || all_passed=0
+    done
+    if [[ $final -eq 1 && $all_passed -eq 1 ]]; then
+        final_ran=1
         # The final run uses its own database under target/, so your data/ folder is left alone.
         local url="jdbc:h2:file:./target/final-run/lantern;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE"
         set +e
@@ -100,8 +110,18 @@ check() {
     cp "$work"/*.log "$logs/"
     echo "health (mvn -q clean verify): $(word "$health_ok")"
     for m in $(rows | cut -f1); do
-        echo "milestone $m $(field "$m" 2): $(word "${passed[m]}") (${totals[m]})"
+        if [[ ${passed[m]} -eq 2 ]]; then
+            echo "milestone $m $(field "$m" 2): NOT RUN (the test run was stopped before these checks)"
+        else
+            echo "milestone $m $(field "$m" 2): $(word "${passed[m]}") (${totals[m]})"
+        fi
     done
+    if [[ $stopped -eq 1 ]]; then
+        echo "The test run was stopped at its time limit because some code never finished: look for a loop that" \
+            "never ends in your latest change."
+        slow=$(grep -l 'timed out after' "$reports"/*.txt 2>/dev/null | sed 's|.*/||; s|\.txt$||' | tr '\n' ' ')
+        [[ -z $slow ]] || echo "Checks with a test that ran too long: $slow"
+    fi
 }
 
 learner_mode() {
@@ -114,7 +134,11 @@ learner_mode() {
         [[ ${passed[m]} -eq 1 ]] || failed=1
     done
     if [[ $final -eq 1 ]]; then
-        echo "final run (reset, report 2026-10-15, no TODO LEARNER markers left): $(word "$final_ok")"
+        if [[ $final_ran -eq 1 ]]; then
+            echo "final run (reset, report 2026-10-15, no TODO LEARNER markers left): $(word "$final_ok")"
+        else
+            echo "final run (reset, report 2026-10-15, no TODO LEARNER markers left): NOT RUN (every milestone check must pass first)"
+        fi
         [[ $final_ok -eq 1 ]] || failed=1
         left=$(markers_left "$target")
         [[ -z $left ]] || printf 'Markers still present:\n%s\n' "$left"
@@ -165,7 +189,7 @@ starter_mode() {
         failed=1
     fi
     for m in $(rows | cut -f1); do
-        if [[ ${passed[m]} -ne 0 ]]; then
+        if [[ ${passed[m]} -eq 1 ]]; then
             echo "Expected milestone $m to fail in the untouched starter." >&2
             failed=1
         fi
